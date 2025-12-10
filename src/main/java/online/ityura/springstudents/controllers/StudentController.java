@@ -10,8 +10,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import online.ityura.springstudents.dto.ErrorResponse;
+import online.ityura.springstudents.dto.student.StudentResponse;
 import online.ityura.springstudents.models.Student;
 import online.ityura.springstudents.services.StudentServiceInterface;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -79,7 +82,7 @@ public class StudentController {
 									value = "Student with name and surname: John Doe has been created"
 							)))
 	})
-    public String createStudent(@RequestBody Student student){
+    public String createStudent(@org.springframework.web.bind.annotation.RequestBody Student student){
         studentServiceInterface.createStudent(student);
         return  "Student with name and surname: " + student.getFirstName() + " " + student.getSecondName() + " has " +
                 "been created";
@@ -87,7 +90,7 @@ public class StudentController {
 
     @DeleteMapping(path = "/email/{email}")
     @PreAuthorize("hasRole('ADMIN')")
-	@Operation(summary = "Удалить студента по email")
+	@Operation(summary = "Удалить студента по email (только для админа)")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Студент удален",
 					content = @Content(mediaType = "text/plain",
@@ -120,11 +123,10 @@ public class StudentController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Успешно",
 					content = @Content(mediaType = "application/json",
-							schema = @Schema(implementation = Student.class),
+							schema = @Schema(implementation = StudentResponse.class),
 							examples = @ExampleObject(name = "updateStudentResponse",
 									value = """
 									{
-									  "id": 1,
 									  "firstName": "Jane",
 									  "secondName": "Doe",
 									  "email": "jane.doe@example.com",
@@ -135,13 +137,21 @@ public class StudentController {
 			)),
 			@ApiResponse(responseCode = "404", description = "Студент не найден")
 	})
-    public ResponseEntity<Student> updateStudentByEmail(@RequestBody Student student,
+    public ResponseEntity<?> updateStudentByEmail(@org.springframework.web.bind.annotation.RequestBody Student student,
                                                         @PathVariable String email) {
         boolean updated = studentServiceInterface.updateStudentByEmail(student, email);
         if (updated) {
-            return ResponseEntity.ok(student);           // 200 OK
+            StudentResponse response = new StudentResponse(
+					student.getFirstName(),
+					student.getSecondName(),
+					student.getEmail(),
+					student.getBirthDate(),
+					student.getAge()
+			);
+            return ResponseEntity.ok(response);           // 200 OK without id
         } else {
-            return ResponseEntity.notFound().build();    // 404 Not Found
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ErrorResponse("Студент с email: " + email + " не найден"));    // 404 Not Found with JSON message
         }
     }
 }

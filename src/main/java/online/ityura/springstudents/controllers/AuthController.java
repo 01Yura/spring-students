@@ -6,6 +6,12 @@ import online.ityura.springstudents.models.AppUser;
 import online.ityura.springstudents.models.Role;
 import online.ityura.springstudents.repositories.AppUserRepository;
 import online.ityura.springstudents.security.JwtService;
+import online.ityura.springstudents.dto.ErrorResponse;
+import online.ityura.springstudents.dto.auth.RegisterRequest;
+import online.ityura.springstudents.dto.auth.LoginRequest;
+import online.ityura.springstudents.dto.auth.RefreshRequest;
+import online.ityura.springstudents.dto.auth.AuthResponse;
+import online.ityura.springstudents.dto.auth.RegisterSuccessResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -67,13 +73,13 @@ public class AuthController {
 									""")))
 	})
 	public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
-		if (appUserRepository.existsByEmail(request.email())) {
+		if (appUserRepository.existsByEmail(request.getEmail())) {
 			return ResponseEntity.badRequest().body(new ErrorResponse("User with this email already exists"));
 		}
 		AppUser user = new AppUser();
-		user.setName(request.name());
-		user.setEmail(request.email());
-		user.setPasswordHash(passwordEncoder.encode(request.password()));
+		user.setName(request.getName());
+		user.setEmail(request.getEmail());
+		user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
 		user.setRole(Role.USER);
 		appUserRepository.save(user);
 
@@ -122,12 +128,12 @@ public class AuthController {
 	public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
 		try {
 				authenticationManager.authenticate(
-					new UsernamePasswordAuthenticationToken(request.email(), request.password())
+					new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
 			);
 		} catch (BadCredentialsException ex) {
 				return ResponseEntity.status(401).body(new ErrorResponse("Invalid email or password"));
 		}
-		AppUser user = appUserRepository.findByEmail(request.email()).orElseThrow();
+		AppUser user = appUserRepository.findByEmail(request.getEmail()).orElseThrow();
 		String accessToken = jwtService.generateAccessToken(user);
 		String refreshToken = jwtService.generateRefreshToken(user);
 		return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken, 300));
@@ -169,11 +175,11 @@ public class AuthController {
 	public ResponseEntity<?> refresh(@Valid @RequestBody RefreshRequest request) {
 		String email;
 		try {
-			email = jwtService.extractEmail(request.refreshToken());
+			email = jwtService.extractEmail(request.getRefreshToken());
 		} catch (Exception e) {
 			return ResponseEntity.status(401).body(new ErrorResponse("Invalid refresh token"));
 		}
-		if (email == null || jwtService.isTokenExpired(request.refreshToken())) {
+		if (email == null || jwtService.isTokenExpired(request.getRefreshToken())) {
 			return ResponseEntity.status(401).body(new ErrorResponse("Invalid refresh token"));
 		}
 		AppUser user = appUserRepository.findByEmail(email).orElse(null);
@@ -185,37 +191,6 @@ public class AuthController {
 		return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken, 300));
 	}
 
-	public record RegisterRequest(
-			@jakarta.validation.constraints.NotBlank String name,
-			@jakarta.validation.constraints.Email @jakarta.validation.constraints.NotBlank String email,
-			@jakarta.validation.constraints.NotBlank String password
-	) {}
-
-	public record LoginRequest(
-			@jakarta.validation.constraints.Email @jakarta.validation.constraints.NotBlank String email,
-			@jakarta.validation.constraints.NotBlank String password
-	) {}
-
-	public record RefreshRequest(
-			@jakarta.validation.constraints.NotBlank String refreshToken
-	) {}
-
-	public record AuthResponse(
-			String accessToken,
-			String refreshToken,
-			int expiresInSeconds
-	) {}
-
-	public record RegisterSuccessResponse(
-			String login,
-			String email,
-			Role role,
-			String message
-	) {}
-
-	public record ErrorResponse(
-			String message
-	) {}
 }
 
 
