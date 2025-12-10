@@ -47,20 +47,29 @@ public class AuthController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Зарегистрирован",
 					content = @Content(mediaType = "application/json",
-							schema = @Schema(implementation = AuthResponse.class),
-							examples = @ExampleObject(name = "authResponse",
+							schema = @Schema(implementation = RegisterSuccessResponse.class),
+							examples = @ExampleObject(name = "registerSuccessResponse",
 									value = """
 									{
-									  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-									  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-									  "expiresInSeconds": 300
+									  "login": "John Doe",
+									  "email": "john.doe@example.com",
+									  "role": "USER",
+									  "message": "User successfully registered"
 									}
 									"""))),
-			@ApiResponse(responseCode = "400", description = "Пользователь уже существует")
+			@ApiResponse(responseCode = "400", description = "Пользователь уже существует",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ErrorResponse.class),
+							examples = @ExampleObject(name = "emailExistsResponse",
+									value = """
+									{
+									  "message": "User with this email already exists"
+									}
+									""")))
 	})
-	public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+	public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
 		if (appUserRepository.existsByEmail(request.email())) {
-			return ResponseEntity.badRequest().build();
+			return ResponseEntity.badRequest().body(new ErrorResponse("User with this email already exists"));
 		}
 		AppUser user = new AppUser();
 		user.setName(request.name());
@@ -69,9 +78,12 @@ public class AuthController {
 		user.setRole(Role.USER);
 		appUserRepository.save(user);
 
-		String accessToken = jwtService.generateAccessToken(user);
-		String refreshToken = jwtService.generateRefreshToken(user);
-		return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken, 300));
+		return ResponseEntity.ok(new RegisterSuccessResponse(
+				user.getName(),
+				user.getEmail(),
+				user.getRole(),
+				"User successfully registered"
+		));
 	}
 
 	@PostMapping("/login")
@@ -177,6 +189,17 @@ public class AuthController {
 			String accessToken,
 			String refreshToken,
 			int expiresInSeconds
+	) {}
+
+	public record RegisterSuccessResponse(
+			String login,
+			String email,
+			Role role,
+			String message
+	) {}
+
+	public record ErrorResponse(
+			String message
 	) {}
 }
 
