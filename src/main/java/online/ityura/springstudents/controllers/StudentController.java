@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import online.ityura.springstudents.models.Student;
 import online.ityura.springstudents.services.StudentServiceInterface;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +28,7 @@ public class StudentController {
     }
 
     @DeleteMapping(path = "/email/{email}")
+    @PreAuthorize("hasRole('ADMIN')")
     public String deleteStudentByEmail(@PathVariable String email){
         studentServiceInterface.deleteStudentByEmail(email);
         return "Student with email: " + email + " has been deleted SUCCESSFULLY";

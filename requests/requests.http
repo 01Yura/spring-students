@@ -1,0 +1,99 @@
+@accessToken  = eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6Inl1cmFAbWFpbC5ydSIsImlhdCI6MTc2NTMyOTcyMCwiZXhwIjoxNzY1MzMwMDIwfQ.aqzS6eMY8zZPMQkPAtulQemWsWY1Ghn8PHpKK9CaPLs"
+@refreshToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ5dXJhQG1haWwucnUiLCJpYXQiOjE3NjUzMjk3MjAsImV4cCI6MTc2NTQxNjEyMH0.z15qna2zhNE7M1-06I9VJX5K13BQ0h-yTErzvGQXVfs
+
+### Register new user
+POST http://localhost:8080/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "name": "Yura",
+  "email": "yura@mail.ru",
+  "password": "19031986"
+}
+
+### Login user
+POST http://localhost:8080/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "yura@mail.ru",
+  "password": "19031986"
+}
+
+### Create student1
+POST http://localhost:8080/api/v1/students
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "firstName": "Kuksik",
+  "secondName": "Listik",
+  "email": "kuksik@mail.ru",
+  "birthDate": "1985-02-08"
+}
+
+### Create student2
+POST http://localhost:8080/api/v1/students
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "firstName": "Fedia",
+  "secondName": "Funt",
+  "email": "fedia@mail.ru",
+  "birthDate": "1980-02-08"
+}
+
+### Create student3
+POST http://localhost:8080/api/v1/students
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "firstName": "Oleg",
+  "secondName": "Losev",
+  "email": "oleg@mail.ru",
+  "birthDate": "1990-02-08"
+}
+
+### Update token
+POST http://localhost:8080/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+"refreshToken": {{refreshToken}}
+}
+
+### Обновление студента3 по email
+PUT http://localhost:8080/api/v1/students/oleg@mail.ru
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "firstName": "Dragon",
+  "secondName": "XXX",
+  "email": "oleg@mail.ru",
+  "birthDate": "1999-01-01"
+}
+
+### Удаление студента обычным пользователем (запрет)
+DELETE http://localhost:8080/api/v1/students/email/oleg@mail.ru
+Authorization: Bearer {{accessToken}}
+
+### Login as admin
+POST http://localhost:8080/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@local",
+  "password": "admin"
+}
+
+### Получение всех студентов
+GET http://localhost:8080/api/v1/students
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiQURNSU4iLCJzdWIiOiJhZG1pbkBsb2NhbCIsImlhdCI6MTc2NTMzMDE5NSwiZXhwIjoxNzY1MzMwNDk1fQ.Bpg5iMuk2TyERLonBx3WC_gSa36-HTmwZBi8Bp9mj_U
+
+### Удаление студента админом (разрешено)
+DELETE http://localhost:8080/api/v1/students/email/oleg@mail.ru
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiQURNSU4iLCJzdWIiOiJhZG1pbkBsb2NhbCIsImlhdCI6MTc2NTMzMDE5NSwiZXhwIjoxNzY1MzMwNDk1fQ.Bpg5iMuk2TyERLonBx3WC_gSa36-HTmwZBi8Bp9mj_U

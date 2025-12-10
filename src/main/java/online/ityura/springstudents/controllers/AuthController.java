@@ -1,0 +1,100 @@
+package online.ityura.springstudents.controllers;
+
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
+import online.ityura.springstudents.models.AppUser;
+import online.ityura.springstudents.models.Role;
+import online.ityura.springstudents.repositories.AppUserRepository;
+import online.ityura.springstudents.security.JwtService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@AllArgsConstructor
+@RequestMapping("/api/v1/auth")
+public class AuthController {
+	private final AppUserRepository appUserRepository;
+	private final PasswordEncoder passwordEncoder;
+	private final AuthenticationManager authenticationManager;
+	private final JwtService jwtService;
+
+	@PostMapping("/register")
+	public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+		if (appUserRepository.existsByEmail(request.email())) {
+			return ResponseEntity.badRequest().build();
+		}
+		AppUser user = new AppUser();
+		user.setName(request.name());
+		user.setEmail(request.email());
+		user.setPasswordHash(passwordEncoder.encode(request.password()));
+		user.setRole(Role.USER);
+		appUserRepository.save(user);
+
+		String accessToken = jwtService.generateAccessToken(user);
+		String refreshToken = jwtService.generateRefreshToken(user);
+		return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken, 300));
+	}
+
+	@PostMapping("/login")
+	public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+		try {
+			Authentication authentication = authenticationManager.authenticate(
+					new UsernamePasswordAuthenticationToken(request.email(), request.password())
+			);
+		} catch (BadCredentialsException ex) {
+			return ResponseEntity.status(401).build();
+		}
+		AppUser user = appUserRepository.findByEmail(request.email()).orElseThrow();
+		String accessToken = jwtService.generateAccessToken(user);
+		String refreshToken = jwtService.generateRefreshToken(user);
+		return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken, 300));
+	}
+
+	@PostMapping("/refresh")
+	public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+		String email;
+		try {
+			email = jwtService.extractEmail(request.refreshToken());
+		} catch (Exception e) {
+			return ResponseEntity.status(401).build();
+		}
+		if (email == null || jwtService.isTokenExpired(request.refreshToken())) {
+			return ResponseEntity.status(401).build();
+		}
+		AppUser user = appUserRepository.findByEmail(email).orElse(null);
+		if (user == null) {
+			return ResponseEntity.status(401).build();
+		}
+		String accessToken = jwtService.generateAccessToken(user);
+		String refreshToken = jwtService.generateRefreshToken(user);
+		return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken, 300));
+	}
+
+	public record RegisterRequest(
+			@jakarta.validation.constraints.NotBlank String name,
+			@jakarta.validation.constraints.Email @jakarta.validation.constraints.NotBlank String email,
+			@jakarta.validation.constraints.NotBlank String password
+	) {}
+
+	public record LoginRequest(
+			@jakarta.validation.constraints.Email @jakarta.validation.constraints.NotBlank String email,
+			@jakarta.validation.constraints.NotBlank String password
+	) {}
+
+	public record RefreshRequest(
+			@jakarta.validation.constraints.NotBlank String refreshToken
+	) {}
+
+	public record AuthResponse(
+			String accessToken,
+			String refreshToken,
+			int expiresInSeconds
+	) {}
+}
+
+
