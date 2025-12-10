@@ -11,9 +11,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import online.ityura.springstudents.dto.ErrorResponse;
+import online.ityura.springstudents.dto.MessageResponse;
 import online.ityura.springstudents.dto.student.StudentResponse;
 import online.ityura.springstudents.models.Student;
 import online.ityura.springstudents.services.StudentServiceInterface;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -80,12 +82,26 @@ public class StudentController {
 					content = @Content(mediaType = "text/plain",
 							examples = @ExampleObject(name = "createResponse",
 									value = "Student with name and surname: John Doe has been created"
-							)))
+							))),
+			@ApiResponse(responseCode = "409", description = "Студент с таким email уже существует",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ErrorResponse.class),
+							examples = @ExampleObject(name = "emailExistsResponse",
+									value = """
+									{
+									  "message": "Student with this email already exists"
+									}
+									""")))
 	})
-    public String createStudent(@org.springframework.web.bind.annotation.RequestBody Student student){
-        studentServiceInterface.createStudent(student);
-        return  "Student with name and surname: " + student.getFirstName() + " " + student.getSecondName() + " has " +
-                "been created";
+    public ResponseEntity<?> createStudent(@org.springframework.web.bind.annotation.RequestBody Student student){
+        try {
+            studentServiceInterface.createStudent(student);
+            String message = "Student with name and surname: " + student.getFirstName() + " " + student.getSecondName() + " has been created";
+            return ResponseEntity.ok(message);
+        } catch (DataIntegrityViolationException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ErrorResponse("Student with this email already exists"));
+        }
     }
 
     @DeleteMapping(path = "/email/{email}")
@@ -93,16 +109,20 @@ public class StudentController {
 	@Operation(summary = "Удалить студента по email (только для админа)")
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Студент удален",
-					content = @Content(mediaType = "text/plain",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = MessageResponse.class),
 							examples = @ExampleObject(name = "deleteResponse",
 									value = """
-									Student with email: john.doe@example.com has been deleted SUCCESSFULLY
+									{
+									  "message": "Student with email: john.doe@example.com has been deleted SUCCESSFULLY"
+									}
 									""")))
 	})
-	public String deleteStudentByEmail(@Parameter(description = "Email студента", example = "john.doe@example.com")
+	public ResponseEntity<MessageResponse> deleteStudentByEmail(@Parameter(description = "Email студента", example = "john.doe@example.com")
 									   @PathVariable String email){
         studentServiceInterface.deleteStudentByEmail(email);
-        return "Student with email: " + email + " has been deleted SUCCESSFULLY";
+        String message = "Student with email: " + email + " has been deleted SUCCESSFULLY";
+        return ResponseEntity.ok(new MessageResponse(message));
     }
 
     @PutMapping(path = "/{email}")
