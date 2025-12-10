@@ -6,7 +6,7 @@ import online.ityura.springstudents.models.AppUser;
 import online.ityura.springstudents.models.Role;
 import online.ityura.springstudents.repositories.AppUserRepository;
 import online.ityura.springstudents.security.JwtService;
-import online.ityura.springstudents.dto.ErrorResponse;
+import online.ityura.springstudents.dto.MessageResponse;
 import online.ityura.springstudents.dto.auth.RegisterRequest;
 import online.ityura.springstudents.dto.auth.LoginRequest;
 import online.ityura.springstudents.dto.auth.RefreshRequest;
@@ -64,7 +64,7 @@ public class AuthController {
 									"""))),
 			@ApiResponse(responseCode = "400", description = "Пользователь уже существует",
 					content = @Content(mediaType = "application/json",
-							schema = @Schema(implementation = ErrorResponse.class),
+							schema = @Schema(implementation = MessageResponse.class),
 							examples = @ExampleObject(name = "emailExistsResponse",
 									value = """
 									{
@@ -74,7 +74,7 @@ public class AuthController {
 	})
 	public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
 		if (appUserRepository.existsByEmail(request.getEmail())) {
-			return ResponseEntity.badRequest().body(new ErrorResponse("User with this email already exists"));
+			return ResponseEntity.badRequest().body(new MessageResponse("User with this email already exists"));
 		}
 		AppUser user = new AppUser();
 		user.setName(request.getName());
@@ -117,7 +117,7 @@ public class AuthController {
 									"""))),
 			@ApiResponse(responseCode = "401", description = "Неверные учетные данные",
 					content = @Content(mediaType = "application/json",
-							schema = @Schema(implementation = ErrorResponse.class),
+							schema = @Schema(implementation = MessageResponse.class),
 							examples = @ExampleObject(name = "invalidCredentialsResponse",
 									value = """
 									{
@@ -131,7 +131,7 @@ public class AuthController {
 					new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
 			);
 		} catch (BadCredentialsException ex) {
-				return ResponseEntity.status(401).body(new ErrorResponse("Invalid email or password"));
+				return ResponseEntity.status(401).body(new MessageResponse("Invalid email or password"));
 		}
 		AppUser user = appUserRepository.findByEmail(request.getEmail()).orElseThrow();
 		String accessToken = jwtService.generateAccessToken(user);
@@ -164,7 +164,7 @@ public class AuthController {
 									"""))),
 				@ApiResponse(responseCode = "401", description = "Недействительный refresh token",
 						content = @Content(mediaType = "application/json",
-								schema = @Schema(implementation = ErrorResponse.class),
+								schema = @Schema(implementation = MessageResponse.class),
 								examples = @ExampleObject(name = "invalidRefreshTokenResponse",
 										value = """
 										{
@@ -177,14 +177,14 @@ public class AuthController {
 		try {
 			email = jwtService.extractEmail(request.getRefreshToken());
 		} catch (Exception e) {
-			return ResponseEntity.status(401).body(new ErrorResponse("Invalid refresh token"));
+			return ResponseEntity.status(401).body(new MessageResponse("Invalid refresh token"));
 		}
 		if (email == null || jwtService.isTokenExpired(request.getRefreshToken())) {
-			return ResponseEntity.status(401).body(new ErrorResponse("Invalid refresh token"));
+			return ResponseEntity.status(401).body(new MessageResponse("Invalid refresh token"));
 		}
 		AppUser user = appUserRepository.findByEmail(email).orElse(null);
 		if (user == null) {
-			return ResponseEntity.status(401).body(new ErrorResponse("Invalid refresh token"));
+			return ResponseEntity.status(401).body(new MessageResponse("Invalid refresh token"));
 		}
 		String accessToken = jwtService.generateAccessToken(user);
 		String refreshToken = jwtService.generateRefreshToken(user);

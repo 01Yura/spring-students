@@ -10,7 +10,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
-import online.ityura.springstudents.dto.ErrorResponse;
 import online.ityura.springstudents.dto.MessageResponse;
 import online.ityura.springstudents.dto.student.StudentResponse;
 import online.ityura.springstudents.models.Student;
@@ -85,7 +84,7 @@ public class StudentController {
 							))),
 			@ApiResponse(responseCode = "409", description = "Студент с таким email уже существует",
 					content = @Content(mediaType = "application/json",
-							schema = @Schema(implementation = ErrorResponse.class),
+							schema = @Schema(implementation = MessageResponse.class),
 							examples = @ExampleObject(name = "emailExistsResponse",
 									value = """
 									{
@@ -100,7 +99,7 @@ public class StudentController {
             return ResponseEntity.ok(message);
         } catch (DataIntegrityViolationException ex) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(new ErrorResponse("Student with this email already exists"));
+                    .body(new MessageResponse("Student with this email already exists"));
         }
     }
 
@@ -120,7 +119,7 @@ public class StudentController {
 			,
 			@ApiResponse(responseCode = "404", description = "Студент не найден",
 					content = @Content(mediaType = "application/json",
-							schema = @Schema(implementation = ErrorResponse.class),
+							schema = @Schema(implementation = MessageResponse.class),
 							examples = @ExampleObject(name = "notFoundResponse",
 									value = """
 									{
@@ -186,7 +185,7 @@ public class StudentController {
             return ResponseEntity.ok(response);           // 200 OK without id
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(new ErrorResponse("Студент с email: " + email + " не найден"));    // 404 Not Found with JSON message
+                    .body(new MessageResponse("Студент с email: " + email + " не найден"));    // 404 Not Found with JSON message
         }
     }
 }
