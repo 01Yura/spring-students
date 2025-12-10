@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
 import online.ityura.springstudents.models.Student;
 import online.ityura.springstudents.services.StudentServiceInterface;
@@ -20,15 +21,64 @@ import java.util.List;
 @RestController
 @AllArgsConstructor
 @RequestMapping(path = "/api/v1/students")
+@Tag(name = "students", description = "Операции со студентами")
 public class StudentController {
     private final StudentServiceInterface studentServiceInterface;
 
     @GetMapping
+	@Operation(summary = "Получить список всех студентов")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Успешно",
+					content = @Content(mediaType = "application/json",
+							array = @ArraySchema(schema = @Schema(implementation = Student.class)),
+							examples = @ExampleObject(name = "studentsList",
+									value = """
+									[
+									  {
+									    "id": 1,
+									    "firstName": "John",
+									    "secondName": "Doe",
+									    "email": "john.doe@example.com",
+									    "birthDate": "2000-01-15",
+									    "age": 25
+									  },
+									  {
+									    "id": 2,
+									    "firstName": "Jane",
+									    "secondName": "Smith",
+									    "email": "jane.smith@example.com",
+									    "birthDate": "1999-05-20",
+									    "age": 26
+									  }
+									]
+									""")))
+	})
     public List<Student> getAllStudents(){
         return studentServiceInterface.getAllStudents();
     }
 
     @PostMapping
+	@Operation(summary = "Создать нового студента")
+	@io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+			content = @Content(mediaType = "application/json",
+					schema = @Schema(implementation = Student.class),
+					examples = @ExampleObject(name = "createStudentRequest",
+							value = """
+							{
+							  "firstName": "John",
+							  "secondName": "Doe",
+							  "email": "john.doe@example.com",
+							  "birthDate": "2000-01-15"
+							}
+							""")
+			))
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Студент создан",
+					content = @Content(mediaType = "text/plain",
+							examples = @ExampleObject(name = "createResponse",
+									value = "Student with name and surname: John Doe has been created"
+							)))
+	})
     public String createStudent(@RequestBody Student student){
         studentServiceInterface.createStudent(student);
         return  "Student with name and surname: " + student.getFirstName() + " " + student.getSecondName() + " has " +
