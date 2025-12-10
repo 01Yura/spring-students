@@ -33,9 +33,6 @@ import io.swagger.v3.oas.annotations.servers.Server;
                         url = "https://www.apache.org/licenses/LICENSE-2.0"
                 )
         ),
-        servers = {
-                @Server(url = "/", description = "Student server")
-        },
         security = {
                 @SecurityRequirement(name = "bearerAuth"),
                 @SecurityRequirement(name = "oauth2Password")
