@@ -156,21 +156,29 @@ public class AuthController {
 									  "expiresInSeconds": 300
 									}
 									"""))),
-			@ApiResponse(responseCode = "401", description = "Недействительный refresh token")
+				@ApiResponse(responseCode = "401", description = "Недействительный refresh token",
+						content = @Content(mediaType = "application/json",
+								schema = @Schema(implementation = ErrorResponse.class),
+								examples = @ExampleObject(name = "invalidRefreshTokenResponse",
+										value = """
+										{
+										  "message": "Invalid refresh token"
+										}
+										""")))
 	})
-	public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+	public ResponseEntity<?> refresh(@Valid @RequestBody RefreshRequest request) {
 		String email;
 		try {
 			email = jwtService.extractEmail(request.refreshToken());
 		} catch (Exception e) {
-			return ResponseEntity.status(401).build();
+			return ResponseEntity.status(401).body(new ErrorResponse("Invalid refresh token"));
 		}
 		if (email == null || jwtService.isTokenExpired(request.refreshToken())) {
-			return ResponseEntity.status(401).build();
+			return ResponseEntity.status(401).body(new ErrorResponse("Invalid refresh token"));
 		}
 		AppUser user = appUserRepository.findByEmail(email).orElse(null);
 		if (user == null) {
-			return ResponseEntity.status(401).build();
+			return ResponseEntity.status(401).body(new ErrorResponse("Invalid refresh token"));
 		}
 		String accessToken = jwtService.generateAccessToken(user);
 		String refreshToken = jwtService.generateRefreshToken(user);
