@@ -17,7 +17,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -110,15 +109,23 @@ public class AuthController {
 									  "expiresInSeconds": 300
 									}
 									"""))),
-			@ApiResponse(responseCode = "401", description = "Неверные учетные данные")
+			@ApiResponse(responseCode = "401", description = "Неверные учетные данные",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ErrorResponse.class),
+							examples = @ExampleObject(name = "invalidCredentialsResponse",
+									value = """
+									{
+									  "message": "Invalid email or password"
+									}
+									""")))
 	})
-	public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+	public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
 		try {
-			Authentication authentication = authenticationManager.authenticate(
+				authenticationManager.authenticate(
 					new UsernamePasswordAuthenticationToken(request.email(), request.password())
 			);
 		} catch (BadCredentialsException ex) {
-			return ResponseEntity.status(401).build();
+				return ResponseEntity.status(401).body(new ErrorResponse("Invalid email or password"));
 		}
 		AppUser user = appUserRepository.findByEmail(request.email()).orElseThrow();
 		String accessToken = jwtService.generateAccessToken(user);
