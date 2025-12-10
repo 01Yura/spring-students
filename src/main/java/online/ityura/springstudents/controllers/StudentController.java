@@ -15,6 +15,7 @@ import online.ityura.springstudents.dto.student.StudentResponse;
 import online.ityura.springstudents.models.Student;
 import online.ityura.springstudents.services.StudentServiceInterface;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -61,7 +62,7 @@ public class StudentController {
         return studentServiceInterface.getAllStudents();
     }
 
-    @PostMapping
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
 	@Operation(summary = "Создать нового студента")
 	@io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
 			content = @Content(mediaType = "application/json",
@@ -78,9 +79,14 @@ public class StudentController {
 			))
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Студент создан",
-					content = @Content(mediaType = "text/plain",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = MessageResponse.class),
 							examples = @ExampleObject(name = "createResponse",
-									value = "Student with name and surname: John Doe has been created"
+									value = """
+									{
+									  "message": "Student with name and surname: John Doe has been created"
+									}
+									"""
 							))),
 			@ApiResponse(responseCode = "409", description = "Студент с таким email уже существует",
 					content = @Content(mediaType = "application/json",
@@ -92,11 +98,11 @@ public class StudentController {
 									}
 									""")))
 	})
-    public ResponseEntity<?> createStudent(@org.springframework.web.bind.annotation.RequestBody Student student){
+    public ResponseEntity<MessageResponse> createStudent(@org.springframework.web.bind.annotation.RequestBody Student student){
         try {
             studentServiceInterface.createStudent(student);
             String message = "Student with name and surname: " + student.getFirstName() + " " + student.getSecondName() + " has been created";
-            return ResponseEntity.ok(message);
+            return ResponseEntity.ok(new MessageResponse(message));
         } catch (DataIntegrityViolationException ex) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(new MessageResponse("Student with this email already exists"));
