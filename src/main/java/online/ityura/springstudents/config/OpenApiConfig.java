@@ -5,6 +5,11 @@ import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.License;
 import io.swagger.v3.oas.annotations.servers.Server;
+import io.swagger.v3.oas.annotations.security.OAuthFlow;
+import io.swagger.v3.oas.annotations.security.OAuthFlows;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 
 @OpenAPIDefinition(
 		info = @Info(
@@ -24,7 +29,26 @@ import io.swagger.v3.oas.annotations.servers.Server;
 		),
 		servers = {
 				@Server(url = "/", description = "Student server")
+		},
+		security = {
+				@SecurityRequirement(name = "bearerAuth"),
+				@SecurityRequirement(name = "oauth2Password")
 		}
+)
+@SecurityScheme(
+		name = "bearerAuth",
+		type = SecuritySchemeType.HTTP,
+		scheme = "bearer",
+		bearerFormat = "JWT"
+)
+@SecurityScheme(
+		name = "oauth2Password",
+		type = SecuritySchemeType.OAUTH2,
+		flows = @OAuthFlows(
+				password = @OAuthFlow(
+						tokenUrl = "/oauth/token"
+				)
+		)
 )
 public class OpenApiConfig {
 }
