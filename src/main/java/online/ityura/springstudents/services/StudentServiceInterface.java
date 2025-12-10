@@ -9,7 +9,7 @@ public interface StudentServiceInterface {
 
     void createStudent(Student student);
 
-    void deleteStudentByEmail(String email);
+    boolean deleteStudentByEmail(String email);
 
     boolean updateStudentByEmail(Student student, String email);
 }

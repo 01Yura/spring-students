@@ -7,7 +7,7 @@ import java.util.Optional;
 
 // аннотацию @Repository не обязательно вешать так как она есть где то в JpaRepository
 public interface StudentRepository extends JpaRepository<Student, Long> {
-    void deleteByEmail(String email);
+    long deleteByEmail(String email);
 
     Optional<Student> findByEmail(String email);
 }

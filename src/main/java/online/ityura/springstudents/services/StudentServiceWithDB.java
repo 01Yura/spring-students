@@ -27,8 +27,9 @@ public class StudentServiceWithDB implements StudentServiceInterface{
 
     @Override
     @Transactional
-    public void deleteStudentByEmail(String email) {
-        studentRepository.deleteByEmail(email);
+    public boolean deleteStudentByEmail(String email) {
+        long deleted = studentRepository.deleteByEmail(email);
+        return deleted > 0;
     }
 
     @Override

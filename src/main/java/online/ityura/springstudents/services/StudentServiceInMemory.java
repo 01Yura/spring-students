@@ -20,8 +20,9 @@ public class StudentServiceInMemory implements StudentServiceInterface {
         inMemoryStudentRepository.getInMemoryStudentRepositoryList().add(student);
     }
 
-    public void deleteStudentByEmail(String email) {
-        inMemoryStudentRepository.getInMemoryStudentRepositoryList().removeIf(student -> student.getEmail().equals(email));
+    public boolean deleteStudentByEmail(String email) {
+        return inMemoryStudentRepository.getInMemoryStudentRepositoryList()
+                .removeIf(student -> student.getEmail().equals(email));
     }
 
     public boolean updateStudentByEmail(Student student, String email) {

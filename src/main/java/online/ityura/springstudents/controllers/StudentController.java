@@ -117,12 +117,27 @@ public class StudentController {
 									  "message": "Student with email: john.doe@example.com has been deleted SUCCESSFULLY"
 									}
 									""")))
+			,
+			@ApiResponse(responseCode = "404", description = "Студент не найден",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = ErrorResponse.class),
+							examples = @ExampleObject(name = "notFoundResponse",
+									value = """
+									{
+									  "message": "Студент с email: john.doe@example.com не найден"
+									}
+									""")))
 	})
 	public ResponseEntity<MessageResponse> deleteStudentByEmail(@Parameter(description = "Email студента", example = "john.doe@example.com")
 									   @PathVariable String email){
-        studentServiceInterface.deleteStudentByEmail(email);
-        String message = "Student with email: " + email + " has been deleted SUCCESSFULLY";
-        return ResponseEntity.ok(new MessageResponse(message));
+        boolean deleted = studentServiceInterface.deleteStudentByEmail(email);
+        if (deleted) {
+            String message = "Student with email: " + email + " has been deleted SUCCESSFULLY";
+            return ResponseEntity.ok(new MessageResponse(message));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new MessageResponse("Студент с email: " + email + " не найден"));
+        }
     }
 
     @PutMapping(path = "/{email}")
