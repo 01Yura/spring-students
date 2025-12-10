@@ -22,7 +22,7 @@ public class Student {
     @Column(unique = true)
     private String email;
     private LocalDate birthDate;
-    @Transient
+    @Transient // Hibernate/JPA игнорирует поле. Для него не будет колонки в таблице
     private Integer age;
 
     public Integer getAge() {
