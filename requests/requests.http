@@ -1,5 +1,5 @@
-@accessToken  = eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6Inl1cmFAbWFpbC5ydSIsImlhdCI6MTc2NTMyOTcyMCwiZXhwIjoxNzY1MzMwMDIwfQ.aqzS6eMY8zZPMQkPAtulQemWsWY1Ghn8PHpKK9CaPLs"
-@refreshToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ5dXJhQG1haWwucnUiLCJpYXQiOjE3NjUzMjk3MjAsImV4cCI6MTc2NTQxNjEyMH0.z15qna2zhNE7M1-06I9VJX5K13BQ0h-yTErzvGQXVfs
+@accessToken  = eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6Inl1cmFAbWFpbC5ydSIsImlhdCI6MTc2NTM5OTg4OSwiZXhwIjoxNzY1NDAwMTg5fQ.5x-nLqOIfqKOmexg9ZwQUP2i5OHRwpTQdnxdBBg4-0E
+@refreshToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ5dXJhQG1haWwucnUiLCJpYXQiOjE3NjUzOTk4ODksImV4cCI6MTc2NTQ4NjI4OX0.iLT8uYdhZ64NhKGoO-D_akzx4YLx1nNWmXhwZGZISm0
 
 ### Register new user
 POST http://localhost:8080/api/v1/auth/register
@@ -8,7 +8,7 @@ Content-Type: application/json
 {
   "name": "Yura",
   "email": "yura@mail.ru",
-  "password": "19031986"
+  "password": "12345678Qw!"
 }
 
 ### Login user
@@ -17,7 +17,7 @@ Content-Type: application/json
 
 {
   "email": "yura@mail.ru",
-  "password": "19031986"
+  "password": "12345678Qw!"
 }
 
 ### Create student1
@@ -54,6 +54,18 @@ Authorization: Bearer {{accessToken}}
   "secondName": "Losev",
   "email": "oleg@mail.ru",
   "birthDate": "1990-02-08"
+}
+
+### Create student4
+POST http://localhost:8080/api/v1/students
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "firstName": "John",
+  "secondName": "Doe",
+  "email": "john.doe@example.com",
+  "birthDate": "2000-01-15"
 }
 
 ### Update token
