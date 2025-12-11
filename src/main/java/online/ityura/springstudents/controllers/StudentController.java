@@ -2,7 +2,6 @@ package online.ityura.springstudents.controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -15,6 +14,10 @@ import online.ityura.springstudents.dto.student.StudentResponse;
 import online.ityura.springstudents.models.Student;
 import online.ityura.springstudents.services.StudentServiceInterface;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,8 +25,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.github.javafaker.Faker;
+import org.springdoc.core.annotations.ParameterObject;
 import java.time.ZoneId;
-import java.util.List;
 
 @RestController
 @AllArgsConstructor
@@ -32,36 +35,43 @@ import java.util.List;
 public class StudentController {
     private final StudentServiceInterface studentServiceInterface;
 
-    @GetMapping
-	@Operation(summary = "Получить список всех студентов")
-	@ApiResponses(value = {
-			@ApiResponse(responseCode = "200", description = "Успешно",
-					content = @Content(mediaType = "application/json",
-							array = @ArraySchema(schema = @Schema(implementation = Student.class)),
-							examples = @ExampleObject(name = "studentsList",
-									value = """
-									[
-									  {
-									    "id": 1,
-									    "firstName": "John",
-									    "secondName": "Doe",
-									    "email": "john.doe@example.com",
-									    "birthDate": "2000-01-15",
-									    "age": 25
-									  },
-									  {
-									    "id": 2,
-									    "firstName": "Jane",
-									    "secondName": "Smith",
-									    "email": "jane.smith@example.com",
-									    "birthDate": "1999-05-20",
-									    "age": 26
-									  }
-									]
-									""")))
-	})
-    public List<Student> getAllStudents(){
-        return studentServiceInterface.getAllStudents();
+		@GetMapping
+		@Operation(summary = "Получить студентов постранично с сортировкой")
+		@ApiResponses(value = {
+				@ApiResponse(responseCode = "200", description = "Успешно",
+						content = @Content(mediaType = "application/json"))
+		})
+		public ResponseEntity<?> getStudents(
+				@ParameterObject
+				@PageableDefault(size = 5, sort = "id", direction = Sort.Direction.ASC) Pageable pageable
+		) {
+			try {
+				Page<Student> page = studentServiceInterface.getStudents(pageable);
+				return ResponseEntity.ok(page);
+			} catch (IllegalArgumentException ex) {
+				return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+						.body(new MessageResponse(ex.getMessage()));
+			}
+		}
+
+		@Deprecated
+		@GetMapping(path = "/page")
+		@Operation(summary = "Получить студентов постранично с сортировкой", deprecated = true)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Успешно",
+                    content = @Content(mediaType = "application/json"))
+    })
+    public ResponseEntity<?> getStudentsPage(
+            @ParameterObject
+            @PageableDefault(size = 5, sort = "id", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        try {
+            Page<Student> page = studentServiceInterface.getStudents(pageable);
+            return ResponseEntity.ok(page);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new MessageResponse(ex.getMessage()));
+        }
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
