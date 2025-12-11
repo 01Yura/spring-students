@@ -39,7 +39,48 @@ public class StudentController {
 		@Operation(summary = "Получить студентов постранично с сортировкой")
 		@ApiResponses(value = {
 				@ApiResponse(responseCode = "200", description = "Успешно",
-						content = @Content(mediaType = "application/json"))
+						content = @Content(mediaType = "application/json",
+								examples = @ExampleObject(name = "studentsPageResponse",
+										value = """
+										{
+										  "content": [
+										    {
+										      "id": 1,
+										      "firstName": "John",
+										      "secondName": "Doe",
+										      "email": "john.doe@example.com",
+										      "birthDate": "2000-01-15",
+										      "age": 25
+										    },
+										    {
+										      "id": 2,
+										      "firstName": "Jane",
+										      "secondName": "Smith",
+										      "email": "jane.smith@example.com",
+										      "birthDate": "1999-05-20",
+										      "age": 26
+										    }
+										  ],
+										  "pageable": {
+										    "sort": { "empty": true, "sorted": false, "unsorted": true },
+										    "offset": 0,
+										    "pageNumber": 0,
+										    "pageSize": 5,
+										    "paged": true,
+										    "unpaged": false
+										  },
+										  "totalPages": 1,
+										  "totalElements": 2,
+										  "last": true,
+										  "size": 5,
+										  "number": 0,
+										  "sort": { "empty": true, "sorted": false, "unsorted": true },
+										  "first": true,
+										  "numberOfElements": 2,
+										  "empty": false
+										}
+										"""
+								)))
 		})
 		public ResponseEntity<?> getStudents(
 				@ParameterObject
@@ -59,7 +100,48 @@ public class StudentController {
 		@Operation(summary = "Получить студентов постранично с сортировкой", deprecated = true)
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Успешно",
-                    content = @Content(mediaType = "application/json"))
+                    content = @Content(mediaType = "application/json",
+							examples = @ExampleObject(name = "studentsPageResponse",
+									value = """
+									{
+									  "content": [
+									    {
+									      "id": 1,
+									      "firstName": "John",
+									      "secondName": "Doe",
+									      "email": "john.doe@example.com",
+									      "birthDate": "2000-01-15",
+									      "age": 25
+									    },
+									    {
+									      "id": 2,
+									      "firstName": "Jane",
+									      "secondName": "Smith",
+									      "email": "jane.smith@example.com",
+									      "birthDate": "1999-05-20",
+									      "age": 26
+									    }
+									  ],
+									  "pageable": {
+									    "sort": { "empty": true, "sorted": false, "unsorted": true },
+									    "offset": 0,
+									    "pageNumber": 0,
+									    "pageSize": 5,
+									    "paged": true,
+									    "unpaged": false
+									  },
+									  "totalPages": 1,
+									  "totalElements": 2,
+									  "last": true,
+									  "size": 5,
+									  "number": 0,
+									  "sort": { "empty": true, "sorted": false, "unsorted": true },
+									  "first": true,
+									  "numberOfElements": 2,
+									  "empty": false
+									}
+									"""
+							)))
     })
     public ResponseEntity<?> getStudentsPage(
             @ParameterObject
