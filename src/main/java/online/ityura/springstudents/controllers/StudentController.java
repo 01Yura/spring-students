@@ -203,10 +203,24 @@ public class StudentController {
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "200", description = "Студенты сгенерированы",
 					content = @Content(mediaType = "application/json",
-							schema = @Schema(implementation = MessageResponse.class))),
+							schema = @Schema(implementation = MessageResponse.class),
+							examples = @ExampleObject(name = "generateSuccessResponse",
+									value = """
+									{
+									  "message": "Сгенерировано 10 из 10 студентов"
+									}
+									""")
+					)),
 			@ApiResponse(responseCode = "400", description = "Некорректное число для генерации",
 					content = @Content(mediaType = "application/json",
-							schema = @Schema(implementation = MessageResponse.class)))
+							schema = @Schema(implementation = MessageResponse.class),
+							examples = @ExampleObject(name = "generateBadRequestResponse",
+									value = """
+									{
+									  "message": "Количество студентов должно быть в диапазоне 1–50"
+									}
+									""")
+					))
 	})
     public ResponseEntity<MessageResponse> generateStudents(
 			@Parameter(description = "Количество создаваемых студентов (1–50)", example = "10")
@@ -214,7 +228,7 @@ public class StudentController {
 	) {
         if (count < 1 || count > 50) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(new MessageResponse("Параметр count должен быть в диапазоне 1–50"));
+                    .body(new MessageResponse("Количество студентов должно быть в диапазоне 1–50"));
         }
 
         Faker faker = new Faker();

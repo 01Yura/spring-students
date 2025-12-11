@@ -151,6 +151,6 @@ Content-Type: application/x-www-form-urlencoded
 Authorization: Bearer {{userAccessToken}}
 
 ### Генерация 10ти студентов обычным админом (разрешено)
-POST http://localhost:8080/api/v1/students/generate/10
+POST http://localhost:8080/api/v1/students/generate/110
 Content-Type: application/x-www-form-urlencoded
 Authorization: Bearer {{adminAccessToken}}
