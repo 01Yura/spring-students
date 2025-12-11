@@ -21,6 +21,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.github.javafaker.Faker;
+import java.time.ZoneId;
 import java.util.List;
 
 @RestController
@@ -193,5 +195,56 @@ public class StudentController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new MessageResponse("Студент с email: " + email + " не найден"));    // 404 Not Found with JSON message
         }
+    }
+
+	@PreAuthorize("hasRole('ADMIN')")
+    @PostMapping(path = "/generate/{count}", produces = MediaType.APPLICATION_JSON_VALUE)
+	@Operation(summary = "Сгенерировать случайных студентов (1–50)  (только для админа)")
+	@ApiResponses(value = {
+			@ApiResponse(responseCode = "200", description = "Студенты сгенерированы",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = MessageResponse.class))),
+			@ApiResponse(responseCode = "400", description = "Некорректное число для генерации",
+					content = @Content(mediaType = "application/json",
+							schema = @Schema(implementation = MessageResponse.class)))
+	})
+    public ResponseEntity<MessageResponse> generateStudents(
+			@Parameter(description = "Количество создаваемых студентов (1–50)", example = "10")
+			@PathVariable int count
+	) {
+        if (count < 1 || count > 50) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new MessageResponse("Параметр count должен быть в диапазоне 1–50"));
+        }
+
+        Faker faker = new Faker();
+        int created = 0;
+        for (int i = 0; i < count; i++) {
+            String firstName = faker.name().firstName();
+            String secondName = faker.name().lastName();
+            // Снижаем шанс коллизий email добавляя индекс и случайные цифры
+            String emailLocalPart = (firstName + "." + secondName).toLowerCase();
+			String emailDomainPart = faker.internet().domainName();
+            String email = emailLocalPart + i + "@" + emailDomainPart;
+
+            var birthdayDate = faker.date().birthday(18, 80)
+                    .toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+
+            Student student = new Student();
+            student.setFirstName(firstName);
+            student.setSecondName(secondName);
+            student.setEmail(email);
+            student.setBirthDate(birthdayDate);
+
+            try {
+                studentServiceInterface.createStudent(student);
+                created++;
+            } catch (DataIntegrityViolationException ignored) {
+                // пропускаем дубликаты email из-за уникального ограничения
+            }
+        }
+
+        String message = "Сгенерировано " + created + " из " + count + " студентов";
+        return ResponseEntity.ok(new MessageResponse(message));
     }
 }

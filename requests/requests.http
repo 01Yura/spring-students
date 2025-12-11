@@ -1,6 +1,3 @@
-@accessToken  = eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiVVNFUiIsInN1YiI6Inl1cmFAbWFpbC5ydSIsImlhdCI6MTc2NTM5OTg4OSwiZXhwIjoxNzY1NDAwMTg5fQ.5x-nLqOIfqKOmexg9ZwQUP2i5OHRwpTQdnxdBBg4-0E
-@refreshToken = eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ5dXJhQG1haWwucnUiLCJpYXQiOjE3NjUzOTk4ODksImV4cCI6MTc2NTQ4NjI4OX0.iLT8uYdhZ64NhKGoO-D_akzx4YLx1nNWmXhwZGZISm0
-
 ### Register new user
 POST http://localhost:8080/api/v1/auth/register
 Content-Type: application/json
@@ -20,10 +17,29 @@ Content-Type: application/json
   "password": "12345678Qw!"
 }
 
+> {%
+    // В новых версиях HTTP client тело уже разобрано:
+    const json = response.body;        // или response.parsedBody
+
+    if (!json || !json.accessToken || !json.refreshToken) {
+        console.log("❌ Tokens not found in response:", response.body);
+    } else {
+        client.global.set("userAccessToken", json.accessToken);
+        client.global.set("userRefreshToken", json.refreshToken);
+
+        console.log("✅ Access Token saved:", json.accessToken);
+        console.log("✅ Refresh Token saved:", json.refreshToken);
+    }
+%}
+
+
+
+
+
 ### Create student1
 POST http://localhost:8080/api/v1/students
 Content-Type: application/json
-Authorization: Bearer {{accessToken}}
+Authorization: Bearer {{userAccessToken}}
 
 {
   "firstName": "Kuksik",
@@ -35,7 +51,7 @@ Authorization: Bearer {{accessToken}}
 ### Create student2
 POST http://localhost:8080/api/v1/students
 Content-Type: application/json
-Authorization: Bearer {{accessToken}}
+Authorization: Bearer {{userAccessToken}}
 
 {
   "firstName": "Fedia",
@@ -47,7 +63,7 @@ Authorization: Bearer {{accessToken}}
 ### Create student3
 POST http://localhost:8080/api/v1/students
 Content-Type: application/json
-Authorization: Bearer {{accessToken}}
+Authorization: Bearer {{userAccessToken}}
 
 {
   "firstName": "Oleg",
@@ -59,7 +75,7 @@ Authorization: Bearer {{accessToken}}
 ### Create student4
 POST http://localhost:8080/api/v1/students
 Content-Type: application/json
-Authorization: Bearer {{accessToken}}
+Authorization: Bearer {{userAccessToken}}
 
 {
   "firstName": "John",
@@ -73,13 +89,13 @@ POST http://localhost:8080/api/v1/auth/refresh
 Content-Type: application/json
 
 {
-"refreshToken": {{refreshToken}}
+"refreshToken": {{userRefreshToken}}
 }
 
 ### Обновление студента3 по email
 PUT http://localhost:8080/api/v1/students/oleg@mail.ru
 Content-Type: application/json
-Authorization: Bearer {{accessToken}}
+Authorization: Bearer {{userAccessToken}}
 
 {
   "firstName": "Dragon",
@@ -90,7 +106,10 @@ Authorization: Bearer {{accessToken}}
 
 ### Удаление студента обычным пользователем (запрет)
 DELETE http://localhost:8080/api/v1/students/email/oleg@mail.ru
-Authorization: Bearer {{accessToken}}
+Authorization: Bearer {{userAccessToken}}
+
+
+
 
 ### Login as admin
 POST http://localhost:8080/api/v1/auth/login
@@ -101,11 +120,37 @@ Content-Type: application/json
   "password": "admin"
 }
 
+> {%
+    // В новых версиях HTTP client тело уже разобрано:
+    const json = response.body;        // или response.parsedBody
+
+    if (!json || !json.accessToken || !json.refreshToken) {
+        console.log("❌ Tokens not found in response:", response.body);
+    } else {
+        client.global.set("adminAccessToken", json.accessToken);
+        client.global.set("adminRefreshToken", json.refreshToken);
+
+        console.log("✅ Access Token saved:", json.accessToken);
+        console.log("✅ Refresh Token saved:", json.refreshToken);
+    }
+%}
+
+
 ### Получение всех студентов
 GET http://localhost:8080/api/v1/students
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiQURNSU4iLCJzdWIiOiJhZG1pbkBsb2NhbCIsImlhdCI6MTc2NTMzMDE5NSwiZXhwIjoxNzY1MzMwNDk1fQ.Bpg5iMuk2TyERLonBx3WC_gSa36-HTmwZBi8Bp9mj_U
+Authorization: Bearer {{userAccessToken}}
 
 ### Удаление студента админом (разрешено)
 DELETE http://localhost:8080/api/v1/students/email/oleg@mail.ru
-Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoiQURNSU4iLCJzdWIiOiJhZG1pbkBsb2NhbCIsImlhdCI6MTc2NTMzMDE5NSwiZXhwIjoxNzY1MzMwNDk1fQ.Bpg5iMuk2TyERLonBx3WC_gSa36-HTmwZBi8Bp9mj_U
+Authorization: Bearer Authorization: Bearer {{adminAccessToken}}
+
+### Генерация 10ти студентов обычным пользователем (запрещено)
+POST http://localhost:8080/api/v1/students/generate/10
+Content-Type: application/x-www-form-urlencoded
+Authorization: Bearer {{userAccessToken}}
+
+### Генерация 10ти студентов обычным админом (разрешено)
+POST http://localhost:8080/api/v1/students/generate/10
+Content-Type: application/x-www-form-urlencoded
+Authorization: Bearer {{adminAccessToken}}
