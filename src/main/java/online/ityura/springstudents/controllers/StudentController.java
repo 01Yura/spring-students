@@ -46,38 +46,70 @@ public class StudentController {
                                               "content": [
                                                 {
                                                   "id": 1,
-                                                  "firstName": "John",
-                                                  "secondName": "Doe",
-                                                  "email": "john.doe@example.com",
-                                                  "birthDate": "2000-01-15",
-                                                  "age": 25
+                                                  "firstName": "Stepanie",
+                                                  "secondName": "Bauch",
+                                                  "email": "stepanie.bauch0@bernhard.net",
+                                                  "birthDate": "1995-11-09",
+                                                  "age": 30
                                                 },
                                                 {
                                                   "id": 2,
-                                                  "firstName": "Jane",
-                                                  "secondName": "Smith",
-                                                  "email": "jane.smith@example.com",
-                                                  "birthDate": "1999-05-20",
-                                                  "age": 26
+                                                  "firstName": "Walter",
+                                                  "secondName": "Cummerata",
+                                                  "email": "walter.cummerata1@macgyver.co",
+                                                  "birthDate": "1988-01-21",
+                                                  "age": 37
+                                                },
+                                                {
+                                                  "id": 3,
+                                                  "firstName": "Teodoro",
+                                                  "secondName": "Fritsch",
+                                                  "email": "teodoro.fritsch2@kozey.info",
+                                                  "birthDate": "2000-06-06",
+                                                  "age": 25
+                                                },
+                                                {
+                                                  "id": 4,
+                                                  "firstName": "Tamekia",
+                                                  "secondName": "Monahan",
+                                                  "email": "tamekia.monahan3@kertzmann.io",
+                                                  "birthDate": "1996-02-20",
+                                                  "age": 29
+                                                },
+                                                {
+                                                  "id": 5,
+                                                  "firstName": "Charlyn",
+                                                  "secondName": "Hagenes",
+                                                  "email": "charlyn.hagenes4@carroll.com",
+                                                  "birthDate": "1953-01-08",
+                                                  "age": 72
                                                 }
                                               ],
+                                              "empty": false,
+                                              "first": true,
+                                              "last": false,
+                                              "number": 0,
+                                              "numberOfElements": 5,
                                               "pageable": {
-                                                "sort": { "empty": true, "sorted": false, "unsorted": true },
                                                 "offset": 0,
                                                 "pageNumber": 0,
                                                 "pageSize": 5,
                                                 "paged": true,
+                                                "sort": {
+                                                  "empty": false,
+                                                  "sorted": true,
+                                                  "unsorted": false
+                                                },
                                                 "unpaged": false
                                               },
-                                              "totalPages": 1,
-                                              "totalElements": 2,
-                                              "last": true,
                                               "size": 5,
-                                              "number": 0,
-                                              "sort": { "empty": true, "sorted": false, "unsorted": true },
-                                              "first": true,
-                                              "numberOfElements": 2,
-                                              "empty": false
+                                              "sort": {
+                                                "empty": false,
+                                                "sorted": true,
+                                                "unsorted": false
+                                              },
+                                              "totalElements": 50,
+                                              "totalPages": 10
                                             }
                                             """
                             )))
