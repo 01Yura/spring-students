@@ -1,0 +1,15 @@
+package online.ityura.springstudents.dto.health;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class HealthResponse {
+    private String status;
+    private String uptime;
+    private String timestamp;
+}
+
