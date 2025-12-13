@@ -30,8 +30,9 @@ jobs:
           username: ${{ secrets.DEPLOY_SECOND_USER }}
           password: ${{ secrets.DEPLOY_SECOND_PASSWORD }}
           port: 22
-          source: "k8s/app-deployment.yaml,k8s/app-service.yaml,k8s/metallb-config.yaml,k8s/ingress-nginx-deployment.yaml,k8s/ingress.yaml"
+          source: "k8s/*.yaml"
           target: "/tmp/spring-students-k8s"
+          strip_components: 1
 
       - name: Deploy to Kubernetes cluster
         uses: appleboy/ssh-action@v1.0.3
@@ -254,16 +255,22 @@ jobs:
             echo "=========================================="
             echo ""
             echo "Application pods:"
-            kubectl get pods -l app=spring-students-app
+            kubectl get pods -l app=spring-students-app || echo "No pods found"
+            echo ""
+            echo "Application Service:"
+            kubectl get svc -n default spring-students-app || echo "⚠ Service not found"
+            echo ""
+            echo "Application Ingress:"
+            kubectl get ingress -n default spring-students-ingress || echo "⚠ Ingress not found"
             echo ""
             echo "ingress-nginx pods:"
             kubectl get pods -n ingress-nginx
             echo ""
-            echo "Services:"
+            echo "ingress-nginx Service:"
             kubectl get svc -n ingress-nginx ingress-nginx-controller
             echo ""
-            echo "Ingress:"
-            kubectl get ingress
+            echo "All Ingress resources:"
+            kubectl get ingress -A || echo "No Ingress resources found"
             echo ""
 
             if [ -n "$INGRESS_IP" ]; then
