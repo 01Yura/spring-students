@@ -1,0 +1,61 @@
+---
+# Ingress ресурс для балансировки трафика между подами приложения
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: spring-students-ingress
+  labels:
+    app: spring-students-app
+  annotations:
+    # Указываем ingress-nginx как контроллер
+    kubernetes.io/ingress.class: "nginx"
+    # Настройки балансировки нагрузки
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
+    # Распределение запросов на основе URI (для тестирования балансировки)
+    # Можно убрать эту строку для round-robin балансировки
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # Максимальный размер тела запроса
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
+    # Таймаут на установку TCP соединения между nginx и подом приложения (в секундах)
+    # Если под не отвечает в течение 5 секунд при попытке подключения - соединение прерывается
+    # Короткий таймаут позволяет быстро обнаружить упавшие/недоступные поды и не проксировать на них трафик
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "5"
+    # Таймаут на отправку запроса от nginx к поду приложения (в секундах)
+    # Время, в течение которого nginx пытается отправить весь запрос бэкенду
+    # Короткий таймаут для быстрого обнаружения проблемных подов
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "5"
+    # Таймаут на чтение ответа от пода приложения (в секундах)
+    # Время ожидания ответа от бэкенда после отправки запроса
+    # Короткий таймаут (5 сек) позволяет быстро обнаружить упавшие ноды и переключиться на здоровые поды
+    # Если приложению нужно больше времени для обработки - увеличить значение
+spec:
+  ingressClassName: nginx
+  # Используем ingress-nginx контроллер
+  rules:
+    - host: spring-students.local
+      # Имя хоста для доступа к приложению
+      # Можно использовать IP адрес ingress-nginx напрямую или добавить запись в /etc/hosts
+      # Например: 192.168.0.251 spring-students.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spring-students-app
+                # Имя сервиса приложения (ClusterIP)
+                port:
+                  number: 8081
+                  # Порт сервиса приложения
+    # Альтернативный вариант: доступ по IP без указания хоста
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spring-students-app
+                port:
+                  number: 8081
+  # После применения ingress-nginx будет балансировать трафик между всеми подами приложения
+  # Доступ: http://<IP_ingress-nginx>/ или http://spring-students.local/

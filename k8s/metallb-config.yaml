@@ -1,0 +1,28 @@
+---
+# MetalLB IPAddressPool - определяет диапазон IP адресов для LoadBalancer сервисов
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: default-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.0.251-192.168.0.252
+  # Диапазон IP адресов, которые MetalLB будет назначать LoadBalancer сервисам
+  # Эти IP должны быть доступны в вашей сети и не использоваться другими устройствами
+  autoAssign: true
+  # autoAssign: true - автоматически назначать IP из пула при создании LoadBalancer сервиса
+
+---
+# MetalLB L2Advertisement - объявляет IP адреса через протокол ARP (Layer 2)
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: default-l2adv
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - default-pool
+  # L2Advertisement использует протокол ARP для объявления IP адресов
+  # Это означает, что MetalLB будет отвечать на ARP запросы для этих IP адресов
+  # Работает в локальной сети (L2), не требует маршрутизации

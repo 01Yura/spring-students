@@ -5,21 +5,16 @@ metadata:
   labels:
     app: spring-students-app
 spec:
-  type: NodePort
-  # NodePort - открывает порт на каждой ноде кластера (мастер + воркеры)
-  # Доступ к приложению будет через IP любой воркер ноды на указанном NodePort
-  # Пока нет load balancer, используем NodePort для внешнего доступа
+  type: ClusterIP
+  # ClusterIP - внутренний сервис, доступен только внутри кластера
+  # Внешний доступ теперь через ingress-nginx (LoadBalancer с MetalLB)
+  # ingress-nginx будет балансировать трафик между всеми подами этого сервиса
   ports:
     - port: 8081
       # port: 8081 - внутренний порт сервиса в кластере (для доступа между сервисами)
       targetPort: 8081
       # targetPort: 8081 - порт внутри контейнера, на котором слушает Spring Boot приложение
       # Это порт, указанный в server.port в application.properties
-      nodePort: 30081
-      # nodePort: 30081 - порт, который будет открыт на каждой ноде кластера для внешнего доступа
-      # Диапазон NodePort: 30000-32767 (указан в конфигурации Kubernetes)
-      # Доступ извне: http://<IP_воркер_ноды>:30081
-      # Например: http://76.64.94.55:30081 или http://76.64.94.56:30081 (если это IP воркер нод)
       protocol: TCP
       name: http
   selector:

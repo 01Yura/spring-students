@@ -24,7 +24,7 @@ jobs:
           username: ${{ secrets.DEPLOY_SECOND_USER }}
           password: ${{ secrets.DEPLOY_SECOND_PASSWORD }}
           port: 22
-          source: "k8s/app-deployment.yaml,k8s/app-service.yaml"
+          source: "k8s/app-deployment.yaml,k8s/app-service.yaml,k8s/metallb-config.yaml,k8s/ingress-nginx-deployment.yaml,k8s/ingress.yaml"
           target: "/tmp/spring-students-k8s"
 
       - name: Deploy to Kubernetes cluster
@@ -42,19 +42,117 @@ jobs:
             # Перемещаем файлы из подпапки, если они там оказались
             [ -d "k8s" ] && mv k8s/*.yaml . 2>/dev/null && rmdir k8s 2>/dev/null || true
 
+            echo "=========================================="
+            echo "Step 1: Installing/Checking MetalLB"
+            echo "=========================================="
+
+            # Проверяем, установлен ли MetalLB
+            if ! kubectl get namespace metallb-system &>/dev/null; then
+              echo "MetalLB not found, installing..."
+              kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.5/config/manifests/metallb-native.yaml
+              
+              # Ждем готовности MetalLB
+              echo "Waiting for MetalLB to be ready..."
+              kubectl wait --namespace metallb-system \
+                --for=condition=ready pod \
+                --selector=app=metallb \
+                --timeout=180s || true
+            else
+              echo "MetalLB is already installed"
+            fi
+
+            echo ""
+            echo "=========================================="
+            echo "Step 2: Applying MetalLB configuration"
+            echo "=========================================="
+            kubectl apply -f metallb-config.yaml
+
+            echo ""
+            echo "=========================================="
+            echo "Step 3: Deploying ingress-nginx"
+            echo "=========================================="
+            kubectl apply -f ingress-nginx-deployment.yaml
+
+            # Ждем готовности ingress-nginx подов
+            echo "Waiting for ingress-nginx pods to be ready..."
+            kubectl wait --namespace ingress-nginx \
+              --for=condition=ready pod \
+              --selector=app.kubernetes.io/name=ingress-nginx \
+              --timeout=180s || true
+
+            # Ждем назначения LoadBalancer IP
+            echo "Waiting for LoadBalancer IP assignment..."
+            INGRESS_IP=""
+            for i in {1..30}; do
+              INGRESS_IP=$(kubectl get svc -n ingress-nginx ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+              if [ -n "$INGRESS_IP" ]; then
+                break
+              fi
+              echo "Attempt $i/30: Waiting for IP assignment..."
+              sleep 5
+            done
+
+            if [ -z "$INGRESS_IP" ]; then
+              echo "Warning: LoadBalancer IP not assigned yet. It may take a few minutes."
+              echo "Check with: kubectl get svc -n ingress-nginx"
+            else
+              echo "ingress-nginx LoadBalancer IP: $INGRESS_IP"
+            fi
+
+            echo ""
+            echo "=========================================="
+            echo "Step 4: Updating application service (ClusterIP)"
+            echo "=========================================="
+            kubectl apply -f app-service.yaml
+
+            echo ""
+            echo "=========================================="
+            echo "Step 5: Updating application deployment"
+            echo "=========================================="
+
             # Удаляем старые поды для пересоздания с новым образом
             # imagePullPolicy: Always в deployment гарантирует загрузку нового образа
             kubectl delete pods -l app=spring-students-app --ignore-not-found=true || true
 
-            # Применяем манифесты
             kubectl apply -f app-deployment.yaml
-            kubectl apply -f app-service.yaml
 
             # Ждем готовности deployment (все реплики запущены и готовы)
-            kubectl wait --for=condition=available --timeout=120s deployment/spring-students-app || true
+            echo "Waiting for application pods to be ready..."
+            kubectl wait --for=condition=available --timeout=300s deployment/spring-students-app || true
 
-            # Выводим финальный статус
             echo ""
+            echo "=========================================="
+            echo "Step 6: Applying Ingress resource"
+            echo "=========================================="
+            kubectl apply -f ingress.yaml
+
+            echo ""
+            echo "=========================================="
+            echo "Deployment Summary"
+            echo "=========================================="
+            echo ""
+            echo "Application pods:"
             kubectl get pods -l app=spring-students-app
             echo ""
-            echo "Application accessible at: http://<worker_node_ip>:30081"
+            echo "ingress-nginx pods:"
+            kubectl get pods -n ingress-nginx
+            echo ""
+            echo "Services:"
+            kubectl get svc -n ingress-nginx ingress-nginx-controller
+            echo ""
+            echo "Ingress:"
+            kubectl get ingress
+            echo ""
+
+            if [ -n "$INGRESS_IP" ]; then
+              echo "=========================================="
+              echo "Application is accessible at:"
+              echo "  - http://$INGRESS_IP/"
+              echo "  - http://spring-students.local/ (if /etc/hosts configured)"
+              echo "=========================================="
+            else
+              echo "=========================================="
+              echo "To get the LoadBalancer IP, run:"
+              echo "  kubectl get svc -n ingress-nginx ingress-nginx-controller"
+              echo "=========================================="
+            fi
