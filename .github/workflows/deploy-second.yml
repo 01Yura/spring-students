@@ -23,16 +23,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Copy Kubernetes manifests to master node
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEPLOY_SECOND_HOST }}
-          username: ${{ secrets.DEPLOY_SECOND_USER }}
-          password: ${{ secrets.DEPLOY_SECOND_PASSWORD }}
-          port: 22
-          source: "k8s/*.yaml"
-          target: "/tmp/spring-students-k8s"
-          strip_components: 1
+      - name: Copy Kubernetes manifests to master node using rsync
+        run: |
+          # Устанавливаем необходимые инструменты
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass rsync
+
+          # Копируем файлы через rsync с использованием пароля
+          rsync -avz --delete \
+            -e "sshpass -p '${{ secrets.DEPLOY_SECOND_PASSWORD }}' ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 22" \
+            k8s/*.yaml \
+            ${{ secrets.DEPLOY_SECOND_USER }}@${{ secrets.DEPLOY_SECOND_HOST }}:/tmp/spring-students-k8s/
+
+          echo "✓ Files copied successfully via rsync"
+        env:
+          DEBIAN_FRONTEND: noninteractive
 
       - name: Deploy to Kubernetes cluster
         uses: appleboy/ssh-action@v1.0.3
