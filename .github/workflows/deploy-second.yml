@@ -56,7 +56,7 @@ jobs:
             if ! kubectl get namespace metallb-system &>/dev/null; then
               echo "MetalLB not found, installing..."
               kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.5/config/manifests/metallb-native.yaml
-              
+            
               # Ждем готовности MetalLB
               echo "Waiting for MetalLB to be ready..."
               kubectl wait --namespace metallb-system \
