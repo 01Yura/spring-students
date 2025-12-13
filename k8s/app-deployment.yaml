@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: spring-students-app
+  namespace: default
+  # Указываем namespace явно (default - стандартный namespace)
   labels:
     app: spring-students-app
 spec:

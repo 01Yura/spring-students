@@ -4,6 +4,8 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: spring-students-ingress
+  namespace: default
+  # Указываем namespace явно (default - стандартный namespace)
   labels:
     app: spring-students-app
   annotations:
@@ -32,6 +34,19 @@ spec:
   ingressClassName: nginx
   # Используем ingress-nginx контроллер
   rules:
+    # Правило без host - работает для любого хоста (включая IP адрес)
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: spring-students-app
+                # Имя сервиса приложения (ClusterIP)
+                port:
+                  number: 8081
+                  # Порт сервиса приложения
+    # Дополнительное правило для доступа по имени хоста (опционально)
     - host: spring-students.local
       # Имя хоста для доступа к приложению
       # Можно использовать IP адрес ingress-nginx напрямую или добавить запись в /etc/hosts
@@ -43,19 +58,19 @@ spec:
             backend:
               service:
                 name: spring-students-app
-                # Имя сервиса приложения (ClusterIP)
-                port:
-                  number: 8081
-                  # Порт сервиса приложения
-    # Альтернативный вариант: доступ по IP без указания хоста
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: spring-students-app
                 port:
                   number: 8081
   # После применения ingress-nginx будет балансировать трафик между всеми подами приложения
   # Доступ: http://<IP_ingress-nginx>/ или http://spring-students.local/
+  #
+  # Примечание: Для работы HTTPS (порт 443) нужно настроить TLS сертификат
+  # По умолчанию ingress-nginx может использовать самоподписанный сертификат,
+  # но браузер покажет предупреждение о небезопасном соединении
+  #
+  # Для полноценной работы HTTPS раскомментируйте секцию tls ниже и создайте Secret с сертификатом:
+  #   kubectl create secret tls spring-students-tls --cert=path/to/cert.crt --key=path/to/cert.key
+  #
+  # tls:
+  #   - hosts:
+  #       - spring-students.local
+  #     secretName: spring-students-tls
