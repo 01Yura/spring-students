@@ -11,9 +11,9 @@ metadata:
   annotations:
     # Настройки балансировки нагрузки
     # Примечание: kubernetes.io/ingress.class устарела, используем ingressClassName в spec
-    nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
-    # Распределение запросов на основе URI (для тестирования балансировки)
-    # Можно убрать эту строку для round-robin балансировки
+    # По умолчанию ingress-nginx использует round-robin балансировку (равномерное распределение)
+    # Если нужно зафиксировать запросы с одинаковым URI на один под, раскомментируйте строку ниже:
+    # nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     # Максимальный размер тела запроса
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
