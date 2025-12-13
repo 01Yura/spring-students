@@ -47,8 +47,41 @@ jobs:
 
             # Проверяем, что все файлы скопированы
             echo "Checking if all required files are present..."
-            ls -la *.yaml || echo "Warning: Some YAML files might be missing"
+            echo "Files in current directory:"
+            ls -la
             echo ""
+            echo "Files in k8s subdirectory (if exists):"
+            ls -la k8s/ 2>/dev/null || echo "No k8s subdirectory"
+            echo ""
+
+            # Перемещаем файлы из подпапки, если они там оказались
+            if [ -d "k8s" ]; then
+              echo "Moving files from k8s subdirectory..."
+              mv k8s/*.yaml . 2>/dev/null || true
+              rmdir k8s 2>/dev/null || true
+              echo "Files after moving:"
+              ls -la *.yaml
+            fi
+            echo ""
+
+            # Проверяем наличие всех необходимых файлов
+            echo "Checking required files:"
+            MISSING_FILES=0
+            for file in app-deployment.yaml app-service.yaml metallb-config.yaml ingress-nginx-deployment.yaml ingress.yaml; do
+              if [ -f "$file" ]; then
+                echo "  ✓ $file found"
+              else
+                echo "  ✗ $file NOT FOUND!"
+                MISSING_FILES=1
+              fi
+            done
+            echo ""
+
+            if [ $MISSING_FILES -eq 1 ]; then
+              echo "ERROR: Some required files are missing!"
+              echo "This might be a problem with file copying in the pipeline."
+              exit 1
+            fi
 
             # Перемещаем файлы из подпапки, если они там оказались
             [ -d "k8s" ] && mv k8s/*.yaml . 2>/dev/null && rmdir k8s 2>/dev/null || true
@@ -148,11 +181,47 @@ jobs:
             echo "Step 5: Updating application deployment"
             echo "=========================================="
 
+            # Проверяем наличие файла
+            if [ ! -f "app-deployment.yaml" ]; then
+              echo "ERROR: app-deployment.yaml not found!"
+              ls -la *.yaml
+              exit 1
+            fi
+            echo "✓ app-deployment.yaml found"
+
             # Удаляем старые поды для пересоздания с новым образом
             # imagePullPolicy: Always в deployment гарантирует загрузку нового образа
             kubectl delete pods -l app=spring-students-app --ignore-not-found=true || true
 
-            kubectl apply -f app-deployment.yaml
+            echo "Applying app-deployment.yaml..."
+            # Временно отключаем строгий режим для проверки результата
+            set +e
+            APPLY_OUTPUT=$(kubectl apply -f app-deployment.yaml 2>&1)
+            APPLY_EXIT_CODE=$?
+            set -e
+
+            echo "kubectl apply exit code: $APPLY_EXIT_CODE"
+            echo "kubectl apply output:"
+            echo "$APPLY_OUTPUT"
+
+            if [ $APPLY_EXIT_CODE -ne 0 ]; then
+              echo "ERROR: Failed to apply app-deployment.yaml!"
+              echo "Trying to validate YAML..."
+              kubectl apply -f app-deployment.yaml --dry-run=client
+              exit 1
+            fi
+
+            # Проверяем, что Deployment создан
+            sleep 2  # Даем время Kubernetes обработать запрос
+            if ! kubectl get deployment -n default spring-students-app &>/dev/null; then
+              echo "ERROR: Deployment was not created after apply!"
+              echo "Checking if it exists in other namespace..."
+              kubectl get deployment --all-namespaces | grep spring-students-app || echo "Deployment not found in any namespace"
+              echo "Trying to see what went wrong with dry-run..."
+              kubectl apply -f app-deployment.yaml --dry-run=client -o yaml | head -50
+              exit 1
+            fi
+            echo "✓ Deployment created successfully"
 
             # Ждем готовности deployment (все реплики запущены и готовы)
             echo "Waiting for application pods to be ready..."
