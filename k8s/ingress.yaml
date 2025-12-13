@@ -9,9 +9,8 @@ metadata:
   labels:
     app: spring-students-app
   annotations:
-    # Указываем ingress-nginx как контроллер
-    kubernetes.io/ingress.class: "nginx"
     # Настройки балансировки нагрузки
+    # Примечание: kubernetes.io/ingress.class устарела, используем ingressClassName в spec
     nginx.ingress.kubernetes.io/upstream-hash-by: "$request_uri"
     # Распределение запросов на основе URI (для тестирования балансировки)
     # Можно убрать эту строку для round-robin балансировки
