@@ -2,9 +2,9 @@ name: Deploy to Kubernetes Cluster
 
 # Workflow для деплоя приложения в Kubernetes кластер
 # Требуемые секреты в настройках репозитория (Settings -> Secrets and variables -> Actions):
-#   DEPLOY_SECOND_HOST - IP адрес мастер ноды (например: 76.64.94.54)
-#   DEPLOY_SECOND_USER - пользователь для SSH (например: root)
-#   DEPLOY_SECOND_PASSWORD - пароль для SSH (например: toor)
+#   DEPLOY_SECOND_HOST - IP адрес мастер ноды
+#   DEPLOY_SECOND_USER - пользователь для SSH
+#   DEPLOY_SECOND_PASSWORD - пароль для SSH
 
 on:
   workflow_dispatch:
