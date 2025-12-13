@@ -85,6 +85,11 @@ jobs:
               exit 1
             fi
 
+            # Удаляем старые поды, чтобы они пересоздались с новым образом
+            echo "Deleting existing pods to force recreation with new image..."
+            kubectl delete pods -l app=spring-students-app --ignore-not-found=true || true
+            sleep 2
+
             kubectl apply -f app-deployment.yaml
             kubectl apply -f app-service.yaml
 
@@ -96,6 +101,35 @@ jobs:
             kubectl get deployments
             kubectl get services
             kubectl get pods
+
+            echo ""
+            echo "=== Pod Status Details ==="
+            # Проверяем статус подов и выводим детали ошибок, если есть
+            PODS=$(kubectl get pods -l app=spring-students-app -o name 2>/dev/null || echo "")
+            if [ -n "$PODS" ]; then
+              for pod in $PODS; do
+                echo "--- Status of $pod ---"
+                kubectl describe $pod | grep -A 10 "Events:" || true
+                echo ""
+                # Проверяем, есть ли ошибки ImagePullBackoff
+                STATUS=$(kubectl get $pod -o jsonpath='{.status.containerStatuses[0].state.waiting.reason}' 2>/dev/null || echo "")
+                if [ "$STATUS" = "ImagePullBackOff" ] || [ "$STATUS" = "ErrImagePull" ]; then
+                  echo "⚠️  ERROR: Pod is in $STATUS state"
+                  echo "This means Kubernetes cannot pull the Docker image from Docker Hub"
+                  echo "Possible reasons:"
+                  echo "  1. Image '01yura/spring-students:latest' doesn't exist on Docker Hub"
+                  echo "  2. Image is private and requires authentication"
+                  echo "  3. Worker nodes cannot access Docker Hub (network/firewall issue)"
+                  echo "  4. Docker Hub rate limits"
+                  echo ""
+                  echo "To check the exact error, run on master node:"
+                  echo "  kubectl describe $pod"
+                  echo ""
+                  echo "To manually pull image on worker nodes, SSH to each worker and run:"
+                  echo "  docker pull 01yura/spring-students:latest"
+                fi
+              done
+            fi
 
             echo ""
             echo "=== Service Information ==="
