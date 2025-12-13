@@ -45,6 +45,11 @@ jobs:
 
             cd /tmp/spring-students-k8s
 
+            # Проверяем, что все файлы скопированы
+            echo "Checking if all required files are present..."
+            ls -la *.yaml || echo "Warning: Some YAML files might be missing"
+            echo ""
+
             # Перемещаем файлы из подпапки, если они там оказались
             [ -d "k8s" ] && mv k8s/*.yaml . 2>/dev/null && rmdir k8s 2>/dev/null || true
 
@@ -56,7 +61,7 @@ jobs:
             if ! kubectl get namespace metallb-system &>/dev/null; then
               echo "MetalLB not found, installing..."
               kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.5/config/manifests/metallb-native.yaml
-            
+
               # Ждем готовности MetalLB
               echo "Waiting for MetalLB to be ready..."
               kubectl wait --namespace metallb-system \
@@ -102,7 +107,11 @@ jobs:
             # Проверяем логи на наличие ошибок RBAC (должны исчезнуть после перезапуска)
             echo "Checking ingress-nginx logs for RBAC errors..."
             sleep 5  # Даем время подам полностью запуститься
-            if kubectl logs -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx --tail=10 2>&1 | grep -q "endpointslices.*forbidden"; then
+            # Временно отключаем строгий режим для проверки логов
+            set +e
+            LOG_CHECK=$(kubectl logs -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx --tail=10 2>&1 | grep -c "endpointslices.*forbidden" || echo "0")
+            set -e
+            if [ "$LOG_CHECK" -gt 0 ]; then
               echo "⚠ Warning: Still seeing endpointslices RBAC errors in logs"
               echo "This might resolve after a few minutes as pods refresh their tokens"
             else
