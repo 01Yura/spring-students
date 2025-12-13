@@ -24,8 +24,8 @@ jobs:
           username: ${{ secrets.DEPLOY_SECOND_USER }}
           password: ${{ secrets.DEPLOY_SECOND_PASSWORD }}
           port: 22
-          source: "k8s/*"
-          target: "/tmp/spring-students-k8s/"
+          source: "k8s/app-deployment.yaml,k8s/app-service.yaml"
+          target: "/tmp/spring-students-k8s"
 
       - name: Deploy to Kubernetes cluster
         uses: appleboy/ssh-action@v1.0.3
@@ -37,16 +37,54 @@ jobs:
           script: |
             set -e
 
+            # Создаем директорию для манифестов
+            mkdir -p /tmp/spring-students-k8s
             cd /tmp/spring-students-k8s
 
+            echo "Checking copied files..."
+            ls -la
+            echo ""
+            echo "Current directory: $(pwd)"
+            echo "Files in directory:"
+            find . -type f -name "*.yaml" 2>/dev/null || find . -type f 2>/dev/null || echo "No files found"
+
+            # Если файлы скопировались в подпапку k8s, перемещаем их
+            if [ -d "k8s" ]; then
+              echo "Files are in k8s subdirectory, moving them..."
+              mv k8s/*.yaml . 2>/dev/null || true
+              rmdir k8s 2>/dev/null || true
+            fi
+
+            echo ""
+            echo "Files after processing:"
+            ls -la *.yaml 2>/dev/null || echo "No yaml files found"
+
+            echo ""
             echo "Pulling latest Docker image from Docker Hub..."
             # Обновляем образ на всех нодах кластера
             # kubectl не может напрямую pull образ, но при создании подов Kubernetes сам загрузит образ
             # Можно вручную выполнить на каждой ноде: docker pull 01yura/spring-students:latest
 
+            echo ""
             echo "Applying application deployment and service..."
             # База данных PostgreSQL находится вне кластера на IP 192.168.0.22
             # Приложение настроено на подключение к внешней БД
+
+            # Проверяем наличие файлов перед применением
+            if [ ! -f "app-deployment.yaml" ]; then
+              echo "ERROR: app-deployment.yaml not found!"
+              echo "Looking for files:"
+              find /tmp/spring-students-k8s -name "*.yaml" -o -name "*.yml" 2>/dev/null
+              exit 1
+            fi
+
+            if [ ! -f "app-service.yaml" ]; then
+              echo "ERROR: app-service.yaml not found!"
+              echo "Looking for files:"
+              find /tmp/spring-students-k8s -name "*.yaml" -o -name "*.yml" 2>/dev/null
+              exit 1
+            fi
+
             kubectl apply -f app-deployment.yaml
             kubectl apply -f app-service.yaml
 
