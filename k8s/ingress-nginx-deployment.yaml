@@ -39,6 +39,7 @@ rules:
       - secrets
       - namespaces
     verbs:
+      - get
       - list
       - watch
   - apiGroups:
@@ -95,6 +96,14 @@ rules:
       - networking.k8s.io
     resources:
       - ingressclasses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
     verbs:
       - get
       - list
