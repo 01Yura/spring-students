@@ -37,135 +37,24 @@ jobs:
           script: |
             set -e
 
-            # Создаем директорию для манифестов
-            mkdir -p /tmp/spring-students-k8s
             cd /tmp/spring-students-k8s
 
-            echo "Checking copied files..."
-            ls -la
-            echo ""
-            echo "Current directory: $(pwd)"
-            echo "Files in directory:"
-            find . -type f -name "*.yaml" 2>/dev/null || find . -type f 2>/dev/null || echo "No files found"
+            # Перемещаем файлы из подпапки, если они там оказались
+            [ -d "k8s" ] && mv k8s/*.yaml . 2>/dev/null && rmdir k8s 2>/dev/null || true
 
-            # Если файлы скопировались в подпапку k8s, перемещаем их
-            if [ -d "k8s" ]; then
-              echo "Files are in k8s subdirectory, moving them..."
-              mv k8s/*.yaml . 2>/dev/null || true
-              rmdir k8s 2>/dev/null || true
-            fi
-
-            echo ""
-            echo "Files after processing:"
-            ls -la *.yaml 2>/dev/null || echo "No yaml files found"
-
-            echo ""
-            echo "Pulling latest Docker image from Docker Hub..."
-            # Обновляем образ на всех нодах кластера
-            # kubectl не может напрямую pull образ, но при создании подов Kubernetes сам загрузит образ
-            # Можно вручную выполнить на каждой ноде: docker pull 01yura/spring-students:latest
-
-            echo ""
-            echo "Applying application deployment and service..."
-            # База данных PostgreSQL находится вне кластера на IP 192.168.0.22
-            # Приложение настроено на подключение к внешней БД
-
-            # Проверяем наличие файлов перед применением
-            if [ ! -f "app-deployment.yaml" ]; then
-              echo "ERROR: app-deployment.yaml not found!"
-              echo "Looking for files:"
-              find /tmp/spring-students-k8s -name "*.yaml" -o -name "*.yml" 2>/dev/null
-              exit 1
-            fi
-
-            if [ ! -f "app-service.yaml" ]; then
-              echo "ERROR: app-service.yaml not found!"
-              echo "Looking for files:"
-              find /tmp/spring-students-k8s -name "*.yaml" -o -name "*.yml" 2>/dev/null
-              exit 1
-            fi
-
-            # Удаляем старый образ с воркер нод, чтобы загрузилась новая версия
-            echo "Removing old Docker image from worker nodes..."
-            # Получаем список всех нод
-            NODES=$(kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || kubectl get nodes --no-headers | awk '{print $1}')
-
-            for NODE in $NODES; do
-              # Пропускаем мастер ноду
-              if kubectl get node "$NODE" -o jsonpath='{.metadata.labels.node-role\.kubernetes\.io/control-plane}' 2>/dev/null | grep -q "true"; then
-                echo "Skipping master node: $NODE"
-                continue
-              fi
-              
-              echo "Attempting to remove image from node: $NODE"
-              # Используем kubectl debug для выполнения команды на ноде
-              # Создаем временный pod с доступом к Docker socket хоста
-              kubectl run image-cleaner-$(echo $NODE | tr '[:upper:]' '[:lower:]' | tr -d '.-') \
-                --image=docker:dind \
-                --restart=Never \
-                --rm -i \
-                --overrides="{\"spec\":{\"nodeName\":\"$NODE\",\"hostNetwork\":true,\"hostPID\":true,\"containers\":[{\"name\":\"cleaner\",\"image\":\"docker:dind\",\"command\":[\"sh\",\"-c\"],\"args\":[\"docker -H unix:///host/var/run/docker.sock rmi 01yura/spring-students:latest || echo 'Image not found or already removed'\"],\"securityContext\":{\"privileged\":true},\"volumeMounts\":[{\"name\":\"docker-sock\",\"mountPath\":\"/host/var/run/docker.sock\",\"readOnly\":false}]}],\"volumes\":[{\"name\":\"docker-sock\",\"hostPath\":{\"path\":\"/var/run/docker.sock\"}}]}}" \
-                -- sh -c "docker -H unix:///host/var/run/docker.sock rmi 01yura/spring-students:latest || echo 'Image not found or already removed'" 2>/dev/null || \
-              echo "Note: Could not remove image from $NODE automatically. With imagePullPolicy: Always, Kubernetes will pull the new image anyway."
-            done
-
-            # Удаляем старые поды, чтобы они пересоздались с новым образом
-            echo "Deleting existing pods to force recreation with new image..."
+            # Удаляем старые поды для пересоздания с новым образом
+            # imagePullPolicy: Always в deployment гарантирует загрузку нового образа
             kubectl delete pods -l app=spring-students-app --ignore-not-found=true || true
-            sleep 2
 
+            # Применяем манифесты
             kubectl apply -f app-deployment.yaml
             kubectl apply -f app-service.yaml
 
-            echo "Waiting for application to be ready..."
+            # Ждем готовности deployment (все реплики запущены и готовы)
             kubectl wait --for=condition=available --timeout=120s deployment/spring-students-app || true
 
+            # Выводим финальный статус
             echo ""
-            echo "=== Deployment Status ==="
-            kubectl get deployments
-            kubectl get services
-            kubectl get pods
-
+            kubectl get pods -l app=spring-students-app
             echo ""
-            echo "=== Pod Status Details ==="
-            # Проверяем статус подов и выводим детали ошибок, если есть
-            PODS=$(kubectl get pods -l app=spring-students-app -o name 2>/dev/null || echo "")
-            if [ -n "$PODS" ]; then
-              for pod in $PODS; do
-                echo "--- Status of $pod ---"
-                kubectl describe $pod | grep -A 10 "Events:" || true
-                echo ""
-                # Проверяем, есть ли ошибки ImagePullBackoff
-                STATUS=$(kubectl get $pod -o jsonpath='{.status.containerStatuses[0].state.waiting.reason}' 2>/dev/null || echo "")
-                if [ "$STATUS" = "ImagePullBackOff" ] || [ "$STATUS" = "ErrImagePull" ]; then
-                  echo "⚠️  ERROR: Pod is in $STATUS state"
-                  echo "This means Kubernetes cannot pull the Docker image from Docker Hub"
-                  echo "Possible reasons:"
-                  echo "  1. Image '01yura/spring-students:latest' doesn't exist on Docker Hub"
-                  echo "  2. Image is private and requires authentication"
-                  echo "  3. Worker nodes cannot access Docker Hub (network/firewall issue)"
-                  echo "  4. Docker Hub rate limits"
-                  echo ""
-                  echo "To check the exact error, run on master node:"
-                  echo "  kubectl describe $pod"
-                  echo ""
-                  echo "To manually pull image on worker nodes, SSH to each worker and run:"
-                  echo "  docker pull 01yura/spring-students:latest"
-                fi
-              done
-            fi
-
-            echo ""
-            echo "=== Service Information ==="
-            echo "Application is accessible via NodePort on any worker node:"
-            echo "  - NodePort: 30081 (открыт на каждой воркер ноде для внешнего доступа)"
-            echo "  - Service port: 8081 (внутренний порт сервиса в кластере)"
-            echo "  - Target port: 8081 (порт внутри контейнера, на котором слушает Spring Boot приложение)"
-            echo "  - Access URL: http://<worker_node_ip>:30081"
-            echo ""
-            echo "Port mapping explanation:"
-            echo "  External (NodePort) -> Service -> Container"
-            echo "  30081              -> 8081   -> 8081"
-            echo ""
-            echo "To get worker node IPs, run:"
-            echo "  kubectl get nodes -o wide"
+            echo "Application accessible at: http://<worker_node_ip>:30081"
