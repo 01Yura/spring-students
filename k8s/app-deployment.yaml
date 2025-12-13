@@ -44,6 +44,16 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
               # Имя ноды, на которой запущен под (через Kubernetes Downward API)
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+              # IP адрес пода (через Kubernetes Downward API)
+            - name: NODE_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+              # IP адрес ноды, на которой запущен под (через Kubernetes Downward API)
           livenessProbe:
             httpGet:
               path: /actuator/health

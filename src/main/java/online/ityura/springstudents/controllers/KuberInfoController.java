@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.Instant;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -38,10 +40,14 @@ public class KuberInfoController {
                                     {
                                       "podName": "spring-students-app-7d8f9c4b5-abc12",
                                       "nodeName": "worker-node-1",
+                                      "podIP": "10.244.1.5",
+                                      "nodeIP": "192.168.0.100",
                                       "osName": "Linux",
                                       "osVersion": "5.10.0-18-cloud-amd64",
                                       "osArch": "amd64",
-                                      "hostname": "spring-students-app-7d8f9c4b5-abc12"
+                                      "hostname": "spring-students-app-7d8f9c4b5-abc12",
+                                      "timestamp": "2025-12-13T04:14:37.122Z",
+                                      "jvmUptime": "02:15:30"
                                     }
                                     """)))
     })
@@ -58,6 +64,23 @@ public class KuberInfoController {
             nodeName = "not configured";
         }
 
+        // Получаем IP адрес пода из переменной окружения POD_IP (если настроено через downward API)
+        String podIP = System.getenv("POD_IP");
+        if (podIP == null || podIP.isEmpty()) {
+            // Пытаемся получить через InetAddress как fallback
+            try {
+                podIP = InetAddress.getLocalHost().getHostAddress();
+            } catch (UnknownHostException e) {
+                podIP = "unknown";
+            }
+        }
+
+        // Получаем IP адрес ноды из переменной окружения NODE_IP (если настроено через downward API)
+        String nodeIP = System.getenv("NODE_IP");
+        if (nodeIP == null || nodeIP.isEmpty()) {
+            nodeIP = "not configured";
+        }
+
         // Получаем информацию об операционной системе
         String osName = System.getProperty("os.name", "unknown");
         String osVersion = System.getProperty("os.version", "unknown");
@@ -71,19 +94,38 @@ public class KuberInfoController {
             // Если не удалось получить, используем значение по умолчанию
         }
 
+        // Получаем текущую метку времени
+        String timestamp = Instant.now().toString();
+
+        // Получаем время работы JVM и форматируем его
+        long jvmUptimeMs = ManagementFactory.getRuntimeMXBean().getUptime();
+        String jvmUptime = formatUptime(jvmUptimeMs);
+
         KuberInfoResponse response = new KuberInfoResponse(
                 podName,
                 nodeName,
+                podIP,
+                nodeIP,
                 osName,
                 osVersion,
                 osArch,
-                hostname
+                hostname,
+                timestamp,
+                jvmUptime
         );
 
         return ResponseEntity
                 .ok()
                 .cacheControl(CacheControl.noStore().mustRevalidate())
                 .body(response);
+    }
+
+    private String formatUptime(long uptimeMs) {
+        long totalSeconds = uptimeMs / 1000;
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+        return String.format("%02d:%02d:%02d", hours, minutes, seconds);
     }
 }
 
