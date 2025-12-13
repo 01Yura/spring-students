@@ -5,8 +5,7 @@ metadata:
   labels:
     app: spring-students-app
 spec:
-  replicas: 2
-  # 2 реплики для отказоустойчивости на двух воркер нодах
+  replicas: 6
   selector:
     matchLabels:
       app: spring-students-app
