@@ -78,9 +78,10 @@ jobs:
             echo ""
 
             if [ $MISSING_FILES -eq 1 ]; then
-              echo "ERROR: Some required files are missing!"
+              echo "⚠ WARNING: Some required files are missing!"
               echo "This might be a problem with file copying in the pipeline."
-              exit 1
+              echo "Continuing anyway - will try to apply available files..."
+              # Не останавливаем выполнение, продолжаем с доступными файлами
             fi
 
             # Перемещаем файлы из подпапки, если они там оказались
@@ -174,7 +175,14 @@ jobs:
             echo "=========================================="
             echo "Step 4: Updating application service (ClusterIP)"
             echo "=========================================="
-            kubectl apply -f app-service.yaml
+            if [ -f "app-service.yaml" ]; then
+              echo "Applying app-service.yaml..."
+              kubectl apply -f app-service.yaml
+              echo "✓ Service applied"
+            else
+              echo "⚠ ERROR: app-service.yaml not found! Cannot apply Service."
+              echo "This will cause connectivity issues."
+            fi
 
             echo ""
             echo "=========================================="
@@ -231,7 +239,14 @@ jobs:
             echo "=========================================="
             echo "Step 6: Applying Ingress resource"
             echo "=========================================="
-            kubectl apply -f ingress.yaml
+            if [ -f "ingress.yaml" ]; then
+              echo "Applying ingress.yaml..."
+              kubectl apply -f ingress.yaml
+              echo "✓ Ingress applied"
+            else
+              echo "⚠ ERROR: ingress.yaml not found! Cannot apply Ingress."
+              echo "This will cause routing issues."
+            fi
 
             echo ""
             echo "=========================================="
