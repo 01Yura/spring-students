@@ -7,6 +7,12 @@ name: Deploy to Kubernetes Cluster
 #   DEPLOY_SECOND_PASSWORD - пароль для SSH
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "k8s/**"
+      - ".github/workflows/deploy-second.yml"
   workflow_dispatch:
 
 jobs:
@@ -73,12 +79,35 @@ jobs:
             echo "=========================================="
             kubectl apply -f ingress-nginx-deployment.yaml
 
-            # Ждем готовности ingress-nginx подов
-            echo "Waiting for ingress-nginx pods to be ready..."
+            # Проверяем, что права на endpointslices применены
+            echo "Checking if endpointslices permissions are applied..."
+            if kubectl describe clusterrole ingress-nginx | grep -q "endpointslices"; then
+              echo "✓ endpointslices permissions found in ClusterRole"
+            else
+              echo "⚠ Warning: endpointslices permissions not found, but continuing..."
+            fi
+
+            # Перезапускаем поды ingress-nginx, чтобы они получили обновленные права
+            # Это важно, так как поды кэшируют токены и права при старте
+            echo "Restarting ingress-nginx pods to apply updated RBAC permissions..."
+            kubectl rollout restart deployment/ingress-nginx-controller -n ingress-nginx || true
+
+            # Ждем готовности ingress-nginx подов после перезапуска
+            echo "Waiting for ingress-nginx pods to be ready after restart..."
             kubectl wait --namespace ingress-nginx \
               --for=condition=ready pod \
               --selector=app.kubernetes.io/name=ingress-nginx \
               --timeout=180s || true
+
+            # Проверяем логи на наличие ошибок RBAC (должны исчезнуть после перезапуска)
+            echo "Checking ingress-nginx logs for RBAC errors..."
+            sleep 5  # Даем время подам полностью запуститься
+            if kubectl logs -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx --tail=10 2>&1 | grep -q "endpointslices.*forbidden"; then
+              echo "⚠ Warning: Still seeing endpointslices RBAC errors in logs"
+              echo "This might resolve after a few minutes as pods refresh their tokens"
+            else
+              echo "✓ No endpointslices RBAC errors found in recent logs"
+            fi
 
             # Ждем назначения LoadBalancer IP
             echo "Waiting for LoadBalancer IP assignment..."
