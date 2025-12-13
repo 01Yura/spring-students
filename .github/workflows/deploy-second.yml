@@ -1,0 +1,75 @@
+name: Deploy to Kubernetes Cluster
+
+# Workflow для деплоя приложения в Kubernetes кластер
+# Требуемые секреты в настройках репозитория (Settings -> Secrets and variables -> Actions):
+#   DEPLOY_SECOND_HOST - IP адрес мастер ноды (например: 76.64.94.54)
+#   DEPLOY_SECOND_USER - пользователь для SSH (например: root)
+#   DEPLOY_SECOND_PASSWORD - пароль для SSH (например: toor)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy Kubernetes manifests to master node
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_SECOND_HOST }}
+          username: ${{ secrets.DEPLOY_SECOND_USER }}
+          password: ${{ secrets.DEPLOY_SECOND_PASSWORD }}
+          port: 22
+          source: "k8s/*"
+          target: "/tmp/spring-students-k8s/"
+
+      - name: Deploy to Kubernetes cluster
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_SECOND_HOST }}
+          username: ${{ secrets.DEPLOY_SECOND_USER }}
+          password: ${{ secrets.DEPLOY_SECOND_PASSWORD }}
+          port: 22
+          script: |
+            set -e
+
+            cd /tmp/spring-students-k8s
+
+            echo "Pulling latest Docker image from Docker Hub..."
+            # Обновляем образ на всех нодах кластера
+            # kubectl не может напрямую pull образ, но при создании подов Kubernetes сам загрузит образ
+            # Можно вручную выполнить на каждой ноде: docker pull 01yura/spring-students:latest
+
+            echo "Applying application deployment and service..."
+            # База данных PostgreSQL находится вне кластера на IP 192.168.0.22
+            # Приложение настроено на подключение к внешней БД
+            kubectl apply -f app-deployment.yaml
+            kubectl apply -f app-service.yaml
+
+            echo "Waiting for application to be ready..."
+            kubectl wait --for=condition=available --timeout=120s deployment/spring-students-app || true
+
+            echo ""
+            echo "=== Deployment Status ==="
+            kubectl get deployments
+            kubectl get services
+            kubectl get pods
+
+            echo ""
+            echo "=== Service Information ==="
+            echo "Application is accessible via NodePort on any worker node:"
+            echo "  - NodePort: 30081 (открыт на каждой воркер ноде для внешнего доступа)"
+            echo "  - Service port: 8081 (внутренний порт сервиса в кластере)"
+            echo "  - Target port: 8081 (порт внутри контейнера, на котором слушает Spring Boot приложение)"
+            echo "  - Access URL: http://<worker_node_ip>:30081"
+            echo ""
+            echo "Port mapping explanation:"
+            echo "  External (NodePort) -> Service -> Container"
+            echo "  30081              -> 8081   -> 8081"
+            echo ""
+            echo "To get worker node IPs, run:"
+            echo "  kubectl get nodes -o wide"

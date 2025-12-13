@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-students-app
+  labels:
+    app: spring-students-app
+spec:
+  replicas: 2
+  # 2 реплики для отказоустойчивости на двух воркер нодах
+  selector:
+    matchLabels:
+      app: spring-students-app
+  template:
+    metadata:
+      labels:
+        app: spring-students-app
+    spec:
+      containers:
+        - name: app
+          image: 01yura/spring-students:latest
+          ports:
+            - containerPort: 8081
+              # containerPort: 8081 - порт, на котором Spring Boot приложение слушает внутри контейнера
+              # Соответствует server.port=8081 в application.properties
+              name: http
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://192.168.0.22:5432/postgres
+              # Подключение к внешней БД PostgreSQL на IP 192.168.0.22
+              # База данных находится вне Kubernetes кластера
+            - name: SPRING_DATASOURCE_USERNAME
+              value: postgres
+            - name: SPRING_DATASOURCE_PASSWORD
+              value: postgres
+            - name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: update
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 30
+            periodSeconds: 5
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
