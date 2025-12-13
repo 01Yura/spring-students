@@ -41,6 +41,7 @@ public class SecurityConfig {
 						.requestMatchers("/api/v1/health").permitAll()
 						.requestMatchers("/actuator/health").permitAll()
 						.requestMatchers("/actuator/health/**").permitAll()
+						.requestMatchers("/kuberinfo").permitAll()
 						.requestMatchers("/api/v1/students/**").authenticated()
 						.anyRequest().permitAll()
 				)

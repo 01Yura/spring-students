@@ -39,6 +39,11 @@ spec:
               value: update
             - name: SPRING_PROFILES_ACTIVE
               value: prod
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+              # Имя ноды, на которой запущен под (через Kubernetes Downward API)
           livenessProbe:
             httpGet:
               path: /actuator/health
