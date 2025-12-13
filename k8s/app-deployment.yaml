@@ -18,6 +18,9 @@ spec:
       containers:
         - name: app
           image: 01yura/spring-students:latest
+          imagePullPolicy: Always
+          # Always - всегда загружать новый образ с Docker Hub, даже если он уже есть локально
+          # Это гарантирует, что при деплое будет использоваться последняя версия образа
           ports:
             - containerPort: 8081
               # containerPort: 8081 - порт, на котором Spring Boot приложение слушает внутри контейнера
